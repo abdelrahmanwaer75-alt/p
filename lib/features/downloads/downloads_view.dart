@@ -37,15 +37,11 @@ class DownloadsPage extends ConsumerWidget {
                 {'starting', 'downloading', 'paused'}.contains(task.status),
           )
           .toList(),
-      strings.queued: tasks
-          .where((task) => task.status == 'queued')
-          .toList(),
+      strings.queued: tasks.where((task) => task.status == 'queued').toList(),
       strings.completed: tasks
           .where((task) => task.status == 'completed')
           .toList(),
-      strings.failed: tasks
-          .where((task) => task.status == 'failed')
-          .toList(),
+      strings.failed: tasks.where((task) => task.status == 'failed').toList(),
       strings.cancelled: tasks
           .where((task) => task.status == 'cancelled')
           .toList(),
@@ -179,10 +175,7 @@ class DownloadsPage extends ConsumerWidget {
         };
         return [
           for (final action in actions)
-            PopupMenuItem(
-              value: action,
-              child: Text(labels[action] ?? action),
-            ),
+            PopupMenuItem(value: action, child: Text(labels[action] ?? action)),
         ];
       },
     );

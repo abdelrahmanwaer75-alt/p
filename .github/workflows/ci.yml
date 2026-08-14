@@ -110,12 +110,7 @@ jobs:
       - run: flutter pub get
       - name: Run Freezed and json_serializable generation
         run: dart run build_runner build --delete-conflicting-outputs
-      - name: Materialize Dart formatter output for final verification
-        run: dart format .
-      - name: Show formatter diff
-        run: git diff -- lib/core/localization/app_localizations.dart lib/features/downloads/downloads_view.dart
-      - name: Enforce Dart formatting
-        run: git diff --exit-code -- lib/core/localization/app_localizations.dart lib/features/downloads/downloads_view.dart
+      - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze
       - run: flutter test
 

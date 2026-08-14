@@ -11,21 +11,21 @@ TASK_ID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 class RedisFake:
     def __init__(self, *, ping_ok: bool = True):
         self.ping_ok = ping_ok
-        self.entries = []
-        self.acked = []
-        self.dead_letters = []
-        self.groups = []
+        self.entries: list[tuple[str, dict[str, str]]] = []
+        self.acked: list[tuple[str, str, str]] = []
+        self.dead_letters: list[tuple[str, dict[str, str]]] = []
+        self.groups: list[tuple[str, str]] = []
         self.next_id = 0
 
-    def ping(self):
+    def ping(self) -> bool:
         if not self.ping_ok:
             raise RedisError("redis unavailable")
         return True
 
-    def xgroup_create(self, stream, group, id, mkstream):
+    def xgroup_create(self, stream: str, group: str, id: str, mkstream: bool) -> None:
         self.groups.append((stream, group))
 
-    def xadd(self, stream, fields, **_kwargs):
+    def xadd(self, stream: str, fields: dict[str, str], **_kwargs: object) -> str:
         self.next_id += 1
         message_id = f"{self.next_id}-0"
         if stream.endswith(":dead-letter"):
@@ -34,17 +34,17 @@ class RedisFake:
             self.entries.append((message_id, fields))
         return message_id
 
-    def xreadgroup(self, group, consumer, streams, count, block):
+    def xreadgroup(self, group: str, consumer: str, streams: dict[str, str], count: int, block: int) -> list[tuple[str, list[tuple[str, dict[str, str]]]]]:
         if not self.entries:
             return []
         message_id, fields = self.entries.pop(0)
         return [(next(iter(streams)), [(message_id, fields)])]
 
-    def xack(self, stream, group, message_id):
+    def xack(self, stream: str, group: str, message_id: str) -> int:
         self.acked.append((stream, group, message_id))
         return 1
 
-    def xautoclaim(self, stream, group, consumer, min_idle_time, start_id, count):
+    def xautoclaim(self, stream: str, group: str, consumer: str, min_idle_time: int, start_id: str, count: int) -> tuple[str, list[tuple[str, dict[str, str]]], list[str]]:
         return ("0-0", [], [])
 
 

@@ -4,6 +4,7 @@ import json
 import socket
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Any, cast
 from uuid import UUID
 
 from redis import Redis
@@ -43,11 +44,14 @@ class DownloadQueue:
     def enqueue(self, task_id: UUID, *, attempt: int = 0) -> str | None:
         try:
             self._ensure_group()
-            return self.redis.xadd(
-                self.stream_name,
-                {"task_id": str(task_id), "attempt": str(attempt), "enqueued_at": datetime.now(timezone.utc).isoformat()},
-                maxlen=10000,
-                approximate=True,
+            return cast(
+                str,
+                self.redis.xadd(
+                    self.stream_name,
+                    {"task_id": str(task_id), "attempt": str(attempt), "enqueued_at": datetime.now(timezone.utc).isoformat()},
+                    maxlen=10000,
+                    approximate=True,
+                ),
             )
         except RedisError:
             return None
@@ -55,12 +59,15 @@ class DownloadQueue:
     def dequeue(self, timeout: int = 1) -> QueueMessage | None:
         try:
             self._ensure_group()
-            response = self.redis.xreadgroup(
-                self.group_name,
-                self.consumer_name,
-                {self.stream_name: ">"},
-                count=1,
-                block=max(timeout, 0) * 1000,
+            response = cast(
+                Any,
+                self.redis.xreadgroup(
+                    self.group_name,
+                    self.consumer_name,
+                    {self.stream_name: ">"},
+                    count=1,
+                    block=max(timeout, 0) * 1000,
+                ),
             )
             if not response:
                 return None
@@ -84,9 +91,10 @@ class DownloadQueue:
 
     def dead_letter(self, message: QueueMessage, *, reason: str, attempt: int) -> bool:
         try:
+            dead_letter_fields: dict[str, str | int | float] = {"task_id": str(message.task_id), "source_message_id": message.message_id, "attempt": str(attempt), "reason": reason}
             self.redis.xadd(
                 self.dead_letter_stream,
-                {"task_id": str(message.task_id), "source_message_id": message.message_id, "attempt": str(attempt), "reason": reason},
+                cast(Any, dead_letter_fields),
                 maxlen=10000,
                 approximate=True,
             )
@@ -98,13 +106,16 @@ class DownloadQueue:
     def recover_pending(self, *, min_idle_ms: int = 60_000, count: int = 100) -> list[QueueMessage]:
         try:
             self._ensure_group()
-            claimed = self.redis.xautoclaim(
-                self.stream_name,
-                self.group_name,
-                self.consumer_name,
-                min_idle_time=min_idle_ms,
-                start_id="0-0",
-                count=count,
+            claimed = cast(
+                Any,
+                self.redis.xautoclaim(
+                    self.stream_name,
+                    self.group_name,
+                    self.consumer_name,
+                    min_idle_time=min_idle_ms,
+                    start_id="0-0",
+                    count=count,
+                ),
             )
             entries = claimed[1] if claimed else []
             result: list[QueueMessage] = []
@@ -119,9 +130,14 @@ class DownloadQueue:
     def publish_event(self, task_id: UUID, event: str, **payload: object) -> bool:
         try:
             event_name = {"queued": "download.created", "starting": "download.started", "started": "download.started", "progress": "download.progress", "completed": "download.completed", "failed": "download.failed", "cancelled": "download.cancelled"}.get(event, event if event.startswith("download.") else f"download.{event}")
-            fields = {"task_id": str(task_id), "event": event_name, "published_at": datetime.now(timezone.utc).isoformat()}
+            fields: dict[str, str | int | float] = {"task_id": str(task_id), "event": event_name, "published_at": datetime.now(timezone.utc).isoformat()}
             fields.update({key: json.dumps(value) if not isinstance(value, str) else value for key, value in payload.items()})
-            self.redis.xadd(self.event_stream, fields, maxlen=10000, approximate=True)
+            self.redis.xadd(
+                self.event_stream,
+                cast(Any, fields),
+                maxlen=10000,
+                approximate=True,
+            )
             return True
         except RedisError:
             return False

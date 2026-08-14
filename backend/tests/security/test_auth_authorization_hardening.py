@@ -1,15 +1,19 @@
 from types import SimpleNamespace
+from typing import cast
 from uuid import UUID, uuid4
 
 import jwt
 import pytest
-from fastapi import WebSocketDisconnect
+from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
+from app.queue import DownloadQueue
+from app.repositories.downloads import DownloadRepository
 from app.core.security import middleware
 from app.main import app
 from app.services.notification_service import NotificationService
+from redis.asyncio import Redis
 
 
 client = TestClient(app)
@@ -113,7 +117,7 @@ def test_production_rate_limiting_fails_closed_without_redis(
             raise RuntimeError("redis unavailable")
 
     limiter = middleware.RateLimiter()
-    limiter._redis = BrokenRedis()
+    limiter._redis = cast(Redis, BrokenRedis())
     monkeypatch.setattr(middleware.settings, "environment", "production")
 
     with pytest.raises(middleware.RateLimitBackendUnavailable):
@@ -179,13 +183,13 @@ def test_websocket_does_not_forward_foreign_user_events() -> None:
     foreign_task_id = str(uuid4())
     websocket = _FakeWebSocket(user_a_tokens["access_token"])
     service = NotificationService(
-        queue=_FakeQueue(foreign_task_id),
-        repository=_FakeRepository(UUID(user_b["id"])),
+        queue=cast(DownloadQueue, _FakeQueue(foreign_task_id)),
+        repository=cast(DownloadRepository, _FakeRepository(UUID(user_b["id"]))),
     )
 
     import asyncio
 
-    asyncio.run(service.stream_downloads(websocket))
+    asyncio.run(service.stream_downloads(cast(WebSocket, websocket)))
     assert websocket.closed == []
     assert websocket.sent == []
     assert user_a["id"] != user_b["id"]

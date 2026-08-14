@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 from fastapi import HTTPException
 
+from app.core.typing import as_http_url
 from app.extractors.registry import registry
 from app.schemas.analyzer import AnalyzerResult, MediaKind, Platform
 
@@ -47,8 +48,8 @@ def resolve_public_addresses(hostname: str, port: int) -> set[str]:
     validation and the eventual outbound connection.
     """
     try:
-        addresses = {
-            item[4][0]
+        addresses: set[str] = {
+            str(item[4][0])
             for item in socket.getaddrinfo(
                 hostname,
                 port,
@@ -100,7 +101,7 @@ def detect_platform(raw_url: str) -> Platform:
 
 def _generic_result(raw_url: str) -> AnalyzerResult:
     return AnalyzerResult(
-        url=raw_url,
+        url=as_http_url(raw_url),
         platform=Platform.GENERIC,
         content_kind=MediaKind.UNKNOWN,
         supported=False,

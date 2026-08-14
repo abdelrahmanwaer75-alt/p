@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from collections.abc import Awaitable, Callable
 
+from app.core.typing import as_http_url, as_optional_http_url
 from app.schemas.analyzer import AnalyzerResult, MediaFormat, MediaKind, Platform
 from app.schemas.downloads import DownloadTask
 
@@ -94,7 +95,7 @@ class PlatformExtractor(ABC):
 
     def unavailable_result(self, url: str) -> AnalyzerResult:
         return AnalyzerResult(
-            url=url,
+            url=as_http_url(url),
             platform=self.platform,
             supported=False,
             content_kind=MediaKind.UNKNOWN,
@@ -102,7 +103,7 @@ class PlatformExtractor(ABC):
             audio_formats=[],
             video_formats=[],
             restrictions=["adapter_unavailable"],
-            limitations=("metadata_unavailable", "formats_unavailable", "download_unavailable"),
+            limitations=["metadata_unavailable", "formats_unavailable", "download_unavailable"],
             message=(
                 "FEATURE_NOT_AVAILABLE: "
                 f"{self.platform.value.title()} is recognized, but no platform-approved extractor is configured yet. "
@@ -115,12 +116,12 @@ class PlatformExtractor(ABC):
         video_formats = [item for item in formats if item.kind == MediaKind.VIDEO]
         content_kind = MediaKind.VIDEO if video_formats else MediaKind.AUDIO if audio_formats else MediaKind.UNKNOWN
         return AnalyzerResult(
-            url=url,
+            url=as_http_url(url),
             platform=self.platform,
             supported=True,
             title=metadata.title,
             description=metadata.description,
-            thumbnail=metadata.thumbnail,
+            thumbnail=as_optional_http_url(metadata.thumbnail),
             duration=metadata.duration,
             uploader=metadata.uploader,
             formats=formats,
@@ -137,6 +138,6 @@ class PlatformExtractor(ABC):
             content_kind=content_kind,
             creator=metadata.uploader,
             duration_seconds=metadata.duration,
-            thumbnail_url=metadata.thumbnail,
+            thumbnail_url=as_optional_http_url(metadata.thumbnail),
             message="Metadata and formats were returned by an authorized platform extractor.",
         )

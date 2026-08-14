@@ -110,7 +110,7 @@ async def process_once(
         _publish(queue, task.id, "failed", error_code="FEATURE_NOT_AVAILABLE")
         return True
 
-    async def cancelled() -> bool:
+    async def is_cancelled() -> bool:
         current = repository.get_any(task.id)
         return current is None or current.status in {DownloadStatus.CANCELLING, DownloadStatus.CANCELLED}
 
@@ -136,12 +136,12 @@ async def process_once(
 
     try:
         repository.update(task.id, status=DownloadStatus.DOWNLOADING.value)
-        result = await extractor.download(task, progress, cancelled)
+        result = await extractor.download(task, progress, is_cancelled)
         current = repository.get_any(task.id)
         if current is None:
             _ack(queue, message.message_id)
             return True
-        if current.status in {DownloadStatus.CANCELLING, DownloadStatus.CANCELLED} or await cancelled():
+        if current.status in {DownloadStatus.CANCELLING, DownloadStatus.CANCELLED} or await is_cancelled():
             repository.update(task.id, status=DownloadStatus.CANCELLED.value, cancelled_at=now())
             _ack(queue, message.message_id)
             _publish(queue, task.id, "cancelled")
@@ -166,7 +166,7 @@ async def process_once(
             library_repository.create(
                 completed.owner_id,
                 LibraryItemCreate(
-                    title=completed.title or completed.output_filename,
+                    title=completed.title or completed.output_filename or "download",
                     source_url=completed.source_url,
                     media_path=completed.output_path,
                     media_type=completed.format_type or "video",

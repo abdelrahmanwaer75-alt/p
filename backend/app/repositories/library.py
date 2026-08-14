@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from app.core.typing import as_http_url
 from app.db import FavoriteModel, HistoryItemModel, LibraryItemModel, get_session
 from app.schemas.library import LibraryItem, LibraryItemCreate
 
@@ -182,7 +183,7 @@ class LibraryRepository:
             id=UUID(model.id),
             owner_id=UUID(model.owner_id),
             title=model.title,
-            source_url=model.source_url,
+            source_url=as_http_url(model.source_url),
             media_path=model.media_path,
             media_type=model.media_type,
             filename=model.filename,

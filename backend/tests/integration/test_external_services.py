@@ -7,6 +7,7 @@ service integration with fakes.
 
 import os
 import uuid
+from typing import Any, cast
 
 import pytest
 from redis import Redis
@@ -54,7 +55,7 @@ def test_redis_stream_group_ack_retry_dead_letter_and_event() -> None:
     assert queue.dead_letter(retry_message, reason="ci-check", attempt=3) is True
 
     assert queue.publish_event(task_id, "progress", progress_percent=25) is True
-    event_entries = redis.xrange(queue.event_stream, count=20)
+    event_entries = cast(list[tuple[str, dict[str, Any]]], redis.xrange(queue.event_stream, count=20))
     assert any(
         fields.get("task_id") == str(task_id)
         and fields.get("event") == "download.progress"

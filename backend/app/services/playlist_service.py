@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import List
 from uuid import UUID
 
 from app.repositories.playlists import PlaylistRepository
@@ -31,5 +32,5 @@ class PlaylistService:
     def remove_item(self, user_id: UUID, playlist_id: UUID, item_id: UUID) -> Playlist | None:
         return self.repository.remove_item(user_id, playlist_id, item_id)
 
-    def reorder(self, user_id: UUID, playlist_id: UUID, item_ids: list[UUID]) -> Playlist | None:
+    def reorder(self, user_id: UUID, playlist_id: UUID, item_ids: List[UUID]) -> Playlist | None:
         return self.repository.reorder(user_id, playlist_id, item_ids)

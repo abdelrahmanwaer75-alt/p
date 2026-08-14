@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.typing import as_http_url
 from app.db import DownloadTaskModel, get_session
 from app.schemas.downloads import DownloadStatus, DownloadTask, DownloadTaskCreate
 from app.services.download_state_machine import require_transition
@@ -195,7 +196,8 @@ class DownloadRepository:
     @staticmethod
     def _from_model(model: DownloadTaskModel) -> DownloadTask:
         return DownloadTask(
-            id=UUID(model.id), owner_id=UUID(model.user_id), source_url=model.source_url,
+            id=UUID(model.id), owner_id=UUID(model.user_id),             source_url=as_http_url(model.source_url),
+
             platform=model.platform, title=model.title, format_id=model.format_id,
             format_type=model.format_type, extension=model.extension, mime_type=model.mime_type,
             quality=model.quality, status=DownloadStatus(model.status), progress_percent=model.progress_percent,

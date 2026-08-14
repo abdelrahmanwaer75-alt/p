@@ -1,8 +1,11 @@
+from typing import cast
 from uuid import UUID
 
 import pytest
 from fastapi import HTTPException
 
+from app.core.typing import as_http_url
+from app.queue.stream import DownloadQueue
 from app.repositories.downloads import DownloadRepository
 from app.schemas.downloads import DownloadStatus, DownloadTaskCreate
 from app.services.download_state_machine import can_transition, require_transition
@@ -30,7 +33,7 @@ class RegistryFake:
 
 
 def payload() -> DownloadTaskCreate:
-    return DownloadTaskCreate(source_url="https://vimeo.com/123", platform="vimeo", format_id="mp4", authorized=True)
+    return DownloadTaskCreate(source_url=as_http_url("https://vimeo.com/123"), platform="vimeo", format_id="mp4", authorized=True)
 
 
 def test_download_state_machine_allows_only_declared_lifecycle_edges() -> None:
@@ -45,7 +48,7 @@ def test_download_state_machine_allows_only_declared_lifecycle_edges() -> None:
 
 
 def test_pause_and_resume_are_explicitly_unavailable_without_native_adapter_support() -> None:
-    service = DownloadService(DownloadRepository(), queue=QueueFake(), extractor_registry=RegistryFake())
+    service = DownloadService(DownloadRepository(), queue=cast(DownloadQueue, QueueFake()), extractor_registry=RegistryFake())
     task = service.create(payload(), OWNER)
     with pytest.raises(HTTPException) as pause_error:
         service.pause(task.id, OWNER)

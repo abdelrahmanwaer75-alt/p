@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import HTTPException
 
+from app.core.typing import as_http_url
 from app.extractors.base import DownloadResult, TransientDownloadError
 from app.repositories.downloads import DownloadRepository
 from app.repositories.library import LibraryRepository
@@ -20,11 +21,11 @@ OWNER_B = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 class FakeQueue:
     def __init__(self, *, enqueue_ok: bool = True):
         self.enqueue_ok = enqueue_ok
-        self.messages = deque()
-        self.acked = []
-        self.events = []
-        self.retries = []
-        self.dead_letters = []
+        self.messages: deque[object] = deque()
+        self.acked: list[str] = []
+        self.events: list[tuple[UUID, str, dict[str, object]]] = []
+        self.retries: list[tuple[object, float, int]] = []
+        self.dead_letters: list[tuple[UUID, str, int]] = []
 
     def enqueue(self, task_id, *, attempt=0):
         if not self.enqueue_ok:
@@ -85,7 +86,7 @@ class FakeRegistry:
 
 def payload() -> DownloadTaskCreate:
     return DownloadTaskCreate(
-        source_url="https://vimeo.com/123456",
+        source_url=as_http_url("https://vimeo.com/123456"),
         platform="vimeo",
         title="Verified title",
         format_id="source-720p",

@@ -1,5 +1,7 @@
 import asyncio
 
+from typing import cast
+
 from fastapi import HTTPException, WebSocket, WebSocketDisconnect
 
 from app.queue import DownloadQueue
@@ -28,7 +30,15 @@ class NotificationService:
         last_id = "$"
         try:
             while True:
-                response = await asyncio.to_thread(self.queue.redis.xread, {self.queue.event_stream: last_id}, count=50, block=25_000)
+                response = cast(
+                    list[tuple[str, list[tuple[str, dict[str, str]]]]],
+                    await asyncio.to_thread(
+                        self.queue.redis.xread,
+                        {self.queue.event_stream: last_id},
+                        count=50,
+                        block=25_000,
+                    ),
+                )
                 if not response:
                     await websocket.send_json({"event": "heartbeat"})
                     continue
@@ -42,7 +52,9 @@ class NotificationService:
                     if task is None or task.owner_id != user.id:
                         continue
                     payload = {"task_id": task_id, "event": fields.get("event", "download.updated")}
-                    payload.update({key: value for key, value in fields.items() if key not in {"task_id", "event", "published_at"}})
+                    payload.update(
+                        {key: value for key, value in fields.items() if key not in {"task_id", "event", "published_at"}}
+                    )
                     await websocket.send_json(payload)
         except WebSocketDisconnect:
             return

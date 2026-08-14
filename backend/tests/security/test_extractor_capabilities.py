@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.core.typing import as_http_url
 from app.extractors.base import DownloadNotAvailable
 from app.extractors.registry import SUPPORTED_PLATFORMS, registry
 from app.schemas.analyzer import Platform
@@ -17,7 +18,7 @@ def test_allowlisted_platform_is_explicitly_disabled_until_approved_adapter_exis
     assert extractor.platform is platform
     assert extractor.available is False
 
-    result = asyncio.run(extractor.analyze(f"https://example.invalid/{platform.value}"))
+    result = asyncio.run(extractor.analyze(str(as_http_url(f"https://example.invalid/{platform.value}"))))
     assert result.supported is False
     assert result.formats == []
     assert result.audio_formats == []
@@ -35,7 +36,7 @@ def test_disabled_platform_download_never_creates_output(platform: Platform) -> 
     task = DownloadTask(
         id=uuid4(),
         owner_id=uuid4(),
-        source_url=f"https://example.invalid/{platform.value}",
+        source_url=as_http_url(f"https://example.invalid/{platform.value}"),
         platform=platform.value,
         title=None,
         format_id="unknown",

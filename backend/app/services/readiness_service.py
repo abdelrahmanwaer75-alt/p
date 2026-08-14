@@ -1,8 +1,16 @@
 from sqlalchemy import text
+from typing import Literal, TypedDict
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.db import engine
 from app.queue import DownloadQueue
+
+
+class ReadinessState(TypedDict):
+    status: Literal["ready", "not_ready"]
+    database: Literal["ok", "error"]
+    redis: Literal["ok", "error"]
 
 
 class ReadinessService:
@@ -20,9 +28,9 @@ class ReadinessService:
     def check_redis(self) -> bool:
         return self.queue.ping()
 
-    def check(self) -> dict[str, str]:
-        database = "ok" if self.check_database() else "error"
-        redis = "ok" if self.check_redis() else "error"
+    def check(self) -> ReadinessState:
+        database: Literal["ok", "error"] = "ok" if self.check_database() else "error"
+        redis: Literal["ok", "error"] = "ok" if self.check_redis() else "error"
         return {
             "status": "ready" if database == "ok" and redis == "ok" else "not_ready",
             "database": database,

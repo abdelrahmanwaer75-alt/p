@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import List
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -110,7 +111,7 @@ class PlaylistRepository:
         finally:
             session.close()
 
-    def reorder(self, user_id: UUID, playlist_id: UUID, item_ids: list[UUID]) -> Playlist | None:
+    def reorder(self, user_id: UUID, playlist_id: UUID, item_ids: List[UUID]) -> Playlist | None:
         session = self._session()
         try:
             playlist = session.scalar(select(PlaylistModel).where(PlaylistModel.id == str(playlist_id), PlaylistModel.user_id == str(user_id)))

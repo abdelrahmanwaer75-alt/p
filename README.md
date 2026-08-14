@@ -183,3 +183,7 @@ For the complete authentication, JWT, authorization, rate-limit, WebSocket isola
 ## Final production-readiness audit
 
 The latest component-by-component audit is available in [`FINAL_PRODUCTION_READINESS_AUDIT.md`](FINAL_PRODUCTION_READINESS_AUDIT.md). It records the exact evidence, environment-dependent checks, disabled downloader status, and remaining blockers. Vidora must not be labeled fully production-ready until the documented Docker, PostgreSQL/Redis, mobile-device, approved-extractor, reconciliation, and deployment-security checks are completed.
+
+## Final validation status
+
+The latest local backend validation passed with 95 tests, 2 service-gated skips, compileall, Ruff, mypy across 109 files, and pip-audit with no known vulnerabilities. GitHub evidence confirmed the Docker job passed, while the integration, security, and Flutter jobs exposed blockers that are being corrected: an Alembic revision identifier exceeded PostgreSQL's version-column limit, the configured Trivy action tag was invalid, and two Dart files required formatter changes. The repository is not fully production-ready until a corrected GitHub Actions run is green and mobile/device plus approved media-adapter limitations are resolved.

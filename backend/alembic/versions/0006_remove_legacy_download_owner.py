@@ -1,12 +1,12 @@
 """remove legacy download owner column
 
-Revision ID: 0006_remove_legacy_download_owner
+Revision ID: 0006_legacy_owner
 Revises: 0005_playlists
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0006_remove_legacy_download_owner"
+revision = "0006_legacy_owner"
 down_revision = "0005_playlists"
 branch_labels = None
 depends_on = None

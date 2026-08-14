@@ -72,3 +72,7 @@ This file should be updated whenever authentication, extractors, storage, queue,
 ## Final audit correction
 
 The current validation evidence supersedes the earlier point-in-time count: **95 backend tests pass with 2 external-service skips**, and **15 Flutter tests pass**. Endpoint-specific authentication, analyzer, download-creation, and general API rate-limit buckets are implemented; production rejects local Redis and fails closed when the shared Redis rate-limit backend is unavailable. See [`FINAL_PRODUCTION_READINESS_AUDIT.md`](FINAL_PRODUCTION_READINESS_AUDIT.md) for the complete status table and remaining deployment blockers.
+
+## Final security validation status
+
+The backend security suite and dependency audit pass locally. GitHub security execution is not yet green because the previous workflow referenced an unresolved Trivy Action tag; the final workflow replaces it with a verified release and requires a new successful run. Production defaults remain guarded, and no passwords, tokens, or authorization headers are logged by application code.

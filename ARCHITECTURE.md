@@ -102,3 +102,7 @@ The Compose services use non-root execution, read-only roots for API and worker,
 ## Final audit addendum
 
 The final component audit is recorded in [`FINAL_PRODUCTION_READINESS_AUDIT.md`](FINAL_PRODUCTION_READINESS_AUDIT.md). The architecture is modular and substantially hardened, but full production readiness remains blocked by unavailable Docker/runtime validation, unverified Android/iOS device behavior, intentionally disabled approved media download integrations, and the missing trusted mobile-to-backend file reconciliation contract.
+
+## Final verification boundary
+
+The architecture remains modular and validated at the backend unit/static level. PostgreSQL/Redis service execution, Flutter runtime checks, Docker live startup, Android/iOS builds, and real approved media adapter execution are environment- or capability-dependent and are not inferred from source inspection. The final readiness audit records these boundaries explicitly.

@@ -37,11 +37,15 @@ class DownloadsPage extends ConsumerWidget {
                 {'starting', 'downloading', 'paused'}.contains(task.status),
           )
           .toList(),
-      strings.queued: tasks.where((task) => task.status == 'queued').toList(),
+      strings.queued: tasks
+          .where((task) => task.status == 'queued')
+          .toList(),
       strings.completed: tasks
           .where((task) => task.status == 'completed')
           .toList(),
-      strings.failed: tasks.where((task) => task.status == 'failed').toList(),
+      strings.failed: tasks
+          .where((task) => task.status == 'failed')
+          .toList(),
       strings.cancelled: tasks
           .where((task) => task.status == 'cancelled')
           .toList(),
@@ -107,7 +111,9 @@ class DownloadsPage extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${known ? '${task.progress!.toStringAsFixed(0)}%' : strings.progressUnavailable} · ${_bytes(task.bytesDownloaded)} / ${task.totalBytes == null ? '—' : _bytes(task.totalBytes!)}',
+                  '${known ? '${task.progress!.toStringAsFixed(0)}%' : strings.progressUnavailable} '
+                  '· ${_bytes(task.bytesDownloaded)} / '
+                  '${task.totalBytes == null ? '—' : _bytes(task.totalBytes!)}',
                 ),
                 Text(
                   task.speed == null

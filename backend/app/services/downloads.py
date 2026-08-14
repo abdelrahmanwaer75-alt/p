@@ -31,7 +31,7 @@ class DownloadService:
             return task
         message_id = self._queue.enqueue(task.id, attempt=task.retry_count)
         if message_id is None:
-            failed = self._repository.update(
+            self._repository.update(
                 task.id,
                 status=DownloadStatus.FAILED.value,
                 error_code="REDIS_UNAVAILABLE",
@@ -58,7 +58,7 @@ class DownloadService:
         if updated is None:
             raise HTTPException(status_code=404, detail="Download task not found")
         if self._queue.enqueue(task.id, attempt=updated.retry_count) is None:
-            failed = self._repository.update(task.id, status=DownloadStatus.FAILED.value, error_code="REDIS_UNAVAILABLE", error_message="Redis Streams unavailable; download was not queued")
+            self._repository.update(task.id, status=DownloadStatus.FAILED.value, error_code="REDIS_UNAVAILABLE", error_message="Redis Streams unavailable; download was not queued")
             raise HTTPException(status_code=503, detail="Redis Streams unavailable; download was not queued")
         return updated
 

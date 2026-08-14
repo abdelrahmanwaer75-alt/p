@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.repositories.library import LibraryRepository
 from app.schemas.files import FileActionResponse, FileInfoResponse, FileItem
-from app.services.storage import FileMetadata, StorageService
+from app.services.storage import StorageService
 
 
 class FileManagerService:

@@ -1,14 +1,17 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+// Freezed generates the interface implemented by these explicit constructors.
+// The fields intentionally satisfy that generated interface.
+// ignore_for_file: annotate_overrides
+
 part 'models.freezed.dart';
-part 'models.g.dart';
 
 // These source models are intentionally explicit and immutable. The repository
 // keeps the Freezed/json_serializable parts so generated code can be refreshed
 // with build_runner in a Flutter-enabled environment.
 
 @Freezed()
-class User {
+class User with _$User {
   const User({
     required this.id,
     required this.email,
@@ -43,7 +46,7 @@ class User {
 }
 
 @Freezed()
-class AuthSession {
+class AuthSession with _$AuthSession {
   const AuthSession({
     required this.user,
     required this.accessToken,
@@ -72,7 +75,7 @@ class AuthSession {
 }
 
 @Freezed()
-class MediaFormat {
+class MediaFormat with _$MediaFormat {
   const MediaFormat({
     required this.formatId,
     required this.extension,
@@ -111,7 +114,7 @@ class MediaFormat {
 }
 
 @Freezed()
-class AnalyzerResult {
+class AnalyzerResult with _$AnalyzerResult {
   const AnalyzerResult({
     required this.url,
     required this.platform,
@@ -178,7 +181,7 @@ class AnalyzerResult {
 }
 
 @Freezed()
-class DownloadTask {
+class DownloadTask with _$DownloadTask {
   const DownloadTask({
     required this.id,
     required this.userId,
@@ -281,7 +284,7 @@ class DownloadTask {
 }
 
 @Freezed()
-class LibraryItem {
+class LibraryItem with _$LibraryItem {
   const LibraryItem({
     required this.id,
     required this.ownerId,
@@ -348,7 +351,7 @@ class LibraryItem {
 }
 
 @Freezed()
-class Favorite {
+class Favorite with _$Favorite {
   const Favorite({
     required this.id,
     required this.userId,
@@ -374,7 +377,7 @@ class Favorite {
 }
 
 @Freezed()
-class HistoryItem {
+class HistoryItem with _$HistoryItem {
   const HistoryItem({
     required this.id,
     required this.userId,
@@ -408,7 +411,7 @@ List<String> _stringList(Object? value) =>
     value is List ? value.whereType<String>().toList() : <String>[];
 
 @Freezed()
-class ManagedFile {
+class ManagedFile with _$ManagedFile {
   const ManagedFile({
     required this.libraryId,
     required this.path,
@@ -467,7 +470,7 @@ class ManagedFile {
 }
 
 @Freezed()
-class PlaylistItem {
+class PlaylistItem with _$PlaylistItem {
   const PlaylistItem({
     required this.id,
     required this.playlistId,
@@ -521,7 +524,7 @@ class PlaylistItem {
 }
 
 @Freezed()
-class Playlist {
+class Playlist with _$Playlist {
   const Playlist({
     required this.id,
     required this.userId,

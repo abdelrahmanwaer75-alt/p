@@ -158,3 +158,19 @@ A current repository inspection confirms that the Compose stack defines four ser
 The API healthcheck calls `GET /health`, which is liveness-only. `GET /ready` checks both PostgreSQL and Redis and returns an unavailable response when either dependency fails. The worker does not use a fake print-based healthcheck: it writes `/tmp/vidora-worker.ready` only after database and Redis checks succeed, and the Compose healthcheck verifies the marker freshness.
 
 The containers use non-root UID/GID `10001:10001`, read-only roots, `/tmp` tmpfs, dropped capabilities, `no-new-privileges`, persistent service volumes, dependency health conditions, and restart policies. Docker runtime communication, image build, and live service health could not be executed in the sandbox because Docker was unavailable; these checks are configured in CI and remain deployment verification items.
+
+## CI/CD validation
+
+GitHub Actions runs on every push and pull request. The workflow contains separate backend, PostgreSQL/Redis integration, Flutter, Docker, and repository-security jobs. Backend validation installs the project dependencies plus Ruff, mypy, and pip-audit; it runs compileall, pytest, linting, type checking, and dependency auditing without silently ignoring failures.
+
+The integration job starts real PostgreSQL 16 and Redis 7 service containers, applies Alembic migrations against PostgreSQL, and runs integration checks that connect to the actual database and Redis Streams. The Redis checks exercise consumer-group creation, enqueue/dequeue, acknowledgement, retry, dead-letter handling, and event publishing.
+
+Flutter CI runs `flutter pub get`, committed Freezed/json_serializable code generation through build_runner, strict Dart formatting, `flutter analyze`, and `flutter test`. Docker CI validates Compose configuration with CI-only variables and builds the backend image. Security CI runs repository secret scanning and Trivy filesystem vulnerability/secret/misconfiguration scanning.
+
+The repository's `main` branch currently does not have GitHub branch protection configured; the GitHub API reported that the branch is not protected. Branch protection was not enabled automatically because repository permissions did not establish that it could be safely configured. Required checks are nevertheless defined in the workflow and run for pull requests.
+
+## CI reliability update
+
+The CI pipeline was validated against the current source rather than previous reports. Freezed model declarations now use the required generated mixins, the stale unused `models.g.dart` part was removed, and `dart run build_runner build` succeeds before Flutter analysis and tests. The generated `models.freezed.dart` output is committed and refreshed by CI.
+
+The backend test dependency now requires a non-vulnerable pytest release range. Ruff runs an explicit E4/E7/E9/F baseline with documented compatibility-export exceptions, mypy runs against the typed core/database/storage layers, and pip-audit checks only the declared backend requirements manifest. The PostgreSQL/Redis integration job uses real service containers and the dedicated integration test is skipped only in ordinary local runs where those service URLs are not provided.

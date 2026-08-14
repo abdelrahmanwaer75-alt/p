@@ -25,6 +25,7 @@ class DownloadRepository:
                 """
                 CREATE TABLE IF NOT EXISTS download_tasks (
                     id TEXT PRIMARY KEY,
+                    owner_id TEXT,
                     source_url TEXT NOT NULL,
                     format_id TEXT NOT NULL,
                     status TEXT NOT NULL,
@@ -36,11 +37,15 @@ class DownloadRepository:
                 )
                 """
             )
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(download_tasks)").fetchall()}
+            if "owner_id" not in columns:
+                connection.execute("ALTER TABLE download_tasks ADD COLUMN owner_id TEXT")
 
-    def create(self, payload: DownloadTaskCreate) -> DownloadTask:
+    def create(self, payload: DownloadTaskCreate, owner_id: UUID) -> DownloadTask:
         now = datetime.now().astimezone()
         task = DownloadTask(
             id=uuid4(),
+            owner_id=owner_id,
             source_url=payload.source_url,
             format_id=payload.format_id,
             status=DownloadStatus.QUEUED,
@@ -55,12 +60,13 @@ class DownloadRepository:
             connection.execute(
                 """
                 INSERT OR REPLACE INTO download_tasks
-                (id, source_url, format_id, status, progress_percent, progress_known,
+                (id, owner_id, source_url, format_id, status, progress_percent, progress_known,
                  error_message, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(task.id),
+                    str(task.owner_id) if task.owner_id else None,
                     str(task.source_url),
                     task.format_id,
                     task.status.value,
@@ -73,20 +79,21 @@ class DownloadRepository:
             )
         return task
 
-    def get(self, task_id: UUID) -> DownloadTask | None:
+    def get(self, task_id: UUID, owner_id: UUID) -> DownloadTask | None:
         with self._connect() as connection:
-            row = connection.execute("SELECT * FROM download_tasks WHERE id = ?", (str(task_id),)).fetchone()
+            row = connection.execute("SELECT * FROM download_tasks WHERE id = ? AND owner_id = ?", (str(task_id), str(owner_id))).fetchone()
         return self._from_row(row) if row else None
 
-    def list(self) -> list[DownloadTask]:
+    def list(self, owner_id: UUID) -> list[DownloadTask]:
         with self._connect() as connection:
-            rows = connection.execute("SELECT * FROM download_tasks ORDER BY created_at DESC").fetchall()
+            rows = connection.execute("SELECT * FROM download_tasks WHERE owner_id = ? ORDER BY created_at DESC", (str(owner_id),)).fetchall()
         return [self._from_row(row) for row in rows]
 
     @staticmethod
     def _from_row(row: sqlite3.Row) -> DownloadTask:
         return DownloadTask(
             id=UUID(row["id"]),
+            owner_id=UUID(row["owner_id"]) if row["owner_id"] else None,
             source_url=row["source_url"],
             format_id=row["format_id"],
             status=DownloadStatus(row["status"]),

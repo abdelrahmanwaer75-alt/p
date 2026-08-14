@@ -6,6 +6,12 @@ from app.main import app
 client = TestClient(app)
 
 
+def auth_headers(email: str) -> dict[str, str]:
+    client.post('/api/v1/auth/register', json={'email': email, 'password': 'CorrectHorseBattery12!'})
+    response = client.post('/api/v1/auth/login', json={'email': email, 'password': 'CorrectHorseBattery12!'})
+    return {'Authorization': f"Bearer {response.json()['access_token']}"}
+
+
 def test_health() -> None:
     response = client.get("/health")
     assert response.status_code == 200
@@ -40,17 +46,29 @@ def test_analyzer_preview_rejects_non_http_url() -> None:
     assert response.status_code == 422
 
 
-def test_download_requires_authorization() -> None:
+def test_download_requires_authenticated_account() -> None:
     response = client.post(
         "/api/v1/downloads",
+        json={"source_url": "https://example.com/video.mp4", "format_id": "mp4", "authorized": True},
+    )
+    assert response.status_code == 401
+
+
+def test_download_requires_source_authorization() -> None:
+    headers = auth_headers('unauthorized@example.com')
+    response = client.post(
+        "/api/v1/downloads",
+        headers=headers,
         json={"source_url": "https://example.com/video.mp4", "format_id": "mp4", "authorized": False},
     )
     assert response.status_code == 403
 
 
 def test_download_is_queued_without_fake_progress() -> None:
+    headers = auth_headers('owner@example.com')
     response = client.post(
         "/api/v1/downloads",
+        headers=headers,
         json={"source_url": "https://example.com/video.mp4", "format_id": "mp4", "authorized": True},
     )
     assert response.status_code == 202
@@ -59,7 +77,7 @@ def test_download_is_queued_without_fake_progress() -> None:
     assert task["progress_percent"] is None
     assert task["progress_known"] is False
 
-    run_response = client.post(f"/api/v1/downloads/{task['id']}/run")
+    run_response = client.post(f"/api/v1/downloads/{task['id']}/run", headers=headers)
     assert run_response.status_code == 200
     assert run_response.json()["status"] == "failed"
     assert "No authorized download adapter" in run_response.json()["error_message"]

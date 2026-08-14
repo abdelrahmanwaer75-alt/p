@@ -79,24 +79,24 @@ async def analyzer_preview(payload: AnalyzeRequest) -> AnalyzerResult:
 
 
 @api.post("/downloads", response_model=DownloadTaskAccepted, status_code=202, tags=["downloads"])
-async def create_download(payload: DownloadTaskCreate) -> DownloadTaskAccepted:
-    task = get_download_service().create(payload)
-    return DownloadTaskAccepted(task=task, message="Download queued. No worker adapter is enabled in this phase.")
+async def create_download(payload: DownloadTaskCreate, user: UserResponse = Depends(get_current_user)) -> DownloadTaskAccepted:
+    task = get_download_service().create(payload, user.id)
+    return DownloadTaskAccepted(task=task, message="Download queued for the authenticated account. No worker adapter is enabled in this phase.")
 
 
 @api.get("/downloads", response_model=list[DownloadTask], tags=["downloads"])
-async def list_downloads() -> list[DownloadTask]:
-    return get_download_service().list()
+async def list_downloads(user: UserResponse = Depends(get_current_user)) -> list[DownloadTask]:
+    return get_download_service().list(user.id)
 
 
 @api.get("/downloads/{task_id}", response_model=DownloadTask, tags=["downloads"])
-async def get_download(task_id: UUID) -> DownloadTask:
-    return get_download_service().get(task_id)
+async def get_download(task_id: UUID, user: UserResponse = Depends(get_current_user)) -> DownloadTask:
+    return get_download_service().get(task_id, user.id)
 
 
 @api.post("/downloads/{task_id}/run", response_model=DownloadTask, tags=["downloads"])
-async def run_download(task_id: UUID) -> DownloadTask:
-    return await get_download_service().run(task_id)
+async def run_download(task_id: UUID, user: UserResponse = Depends(get_current_user)) -> DownloadTask:
+    return await get_download_service().run(task_id, user.id)
 
 
 app.include_router(api)

@@ -21,6 +21,7 @@ class DownloadTaskCreate(BaseModel):
 
 class DownloadTask(BaseModel):
     id: UUID
+    owner_id: UUID | None = None
     source_url: HttpUrl
     format_id: str
     status: DownloadStatus

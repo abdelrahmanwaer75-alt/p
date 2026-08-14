@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/localization/app_localizations.dart';
 import '../features/auth/auth_providers.dart';
 import 'auth_guard.dart';
 import 'route_names.dart';
@@ -88,6 +89,7 @@ class AppNavigation extends StatelessWidget {
       '/favorites',
       '/settings',
     ].indexWhere((path) => location.startsWith(path));
+    final strings = AppLocalizations.of(context);
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
@@ -95,23 +97,26 @@ class AppNavigation extends StatelessWidget {
         onDestinationSelected: (value) => context.go(
           ['/home', '/downloads', '/library', '/favorites', '/settings'][value],
         ),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.download_rounded),
-            label: 'Downloads',
+            icon: const Icon(Icons.home_rounded),
+            label: strings.home,
           ),
           NavigationDestination(
-            icon: Icon(Icons.folder_rounded),
-            label: 'Library',
+            icon: const Icon(Icons.download_rounded),
+            label: strings.downloads,
           ),
           NavigationDestination(
-            icon: Icon(Icons.favorite_rounded),
-            label: 'Favorites',
+            icon: const Icon(Icons.folder_rounded),
+            label: strings.library,
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_rounded),
-            label: 'Settings',
+            icon: const Icon(Icons.favorite_rounded),
+            label: strings.favorites,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.settings_rounded),
+            label: strings.settings,
           ),
         ],
       ),

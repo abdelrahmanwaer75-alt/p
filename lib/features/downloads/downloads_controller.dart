@@ -87,15 +87,38 @@ class DownloadsController
     _fallback ??= Timer.periodic(const Duration(seconds: 5), (_) => load());
   }
 
-  void _handleBackgroundEvent(BackgroundDownloadEvent event) => _applyEvent(
-    event.taskId,
-    event.event,
-    event.progress,
-    event.bytesDownloaded,
-    event.totalBytes,
-    event.outputPath,
-    event.errorCode,
-  );
+  void _handleBackgroundEvent(BackgroundDownloadEvent event) {
+    // Native transfer completion is only a signal. The backend remains the
+    // authority after ownership, output, and task state are verified.
+    if (event.event == BackgroundDownloadEvents.completed ||
+        event.event == 'completed') {
+      unawaited(load());
+      return;
+    }
+    if (event.event == BackgroundDownloadEvents.notificationTap || event.open) {
+      unawaited(_openAuthoritatively(event.taskId));
+      return;
+    }
+    _applyEvent(
+      event.taskId,
+      event.event,
+      event.progress,
+      event.bytesDownloaded,
+      event.totalBytes,
+      event.outputPath,
+      event.errorCode,
+    );
+  }
+
+  Future<void> _openAuthoritatively(String taskId) async {
+    if (taskId.isEmpty) return;
+    try {
+      await _api.openDownload(taskId);
+    } on ApiFailure {
+      // A notification tap must not bypass backend authorization.
+    }
+    await load();
+  }
 
   void _handleEvent(Object? raw) {
     if (raw is! String) return;
@@ -104,9 +127,19 @@ class DownloadsController
       if (json is! Map) return;
       final taskId = json['task_id'] as String?;
       if (taskId == null) return;
+      final event = json['event'] as String? ?? '';
+      if (event == BackgroundDownloadEvents.completed || event == 'completed') {
+        unawaited(load());
+        return;
+      }
+      if (event == BackgroundDownloadEvents.notificationTap ||
+          json['open'] == true) {
+        unawaited(_openAuthoritatively(taskId));
+        return;
+      }
       _applyEvent(
         taskId,
-        json['event'] as String? ?? '',
+        event,
         int.tryParse('${json['progress_percent'] ?? json['progress'] ?? ''}'),
         int.tryParse('${json['bytes_downloaded'] ?? ''}'),
         int.tryParse('${json['total_bytes'] ?? ''}'),

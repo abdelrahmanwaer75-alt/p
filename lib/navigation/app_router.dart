@@ -15,6 +15,7 @@ import '../features/library/library_page.dart';
 import '../features/favorites/favorites_page.dart';
 import '../features/history/history_page.dart';
 import '../features/playlists/playlists_page.dart';
+import '../features/playlists/playlist_details_page.dart';
 import '../features/player/player_page.dart';
 import '../features/settings/settings_page.dart';
 

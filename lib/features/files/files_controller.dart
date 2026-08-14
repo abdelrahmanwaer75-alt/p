@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/models.dart';
 import '../../core/network/api_client.dart';
+import 'file_service.dart';
 import '../../shared/state/resource_state.dart';
 import '../auth/auth_providers.dart';
 
@@ -11,15 +12,15 @@ final fileManagerProvider =
     StateNotifierProvider<
       FileManagerController,
       ResourceState<List<ManagedFile>>
-    >((ref) => FileManagerController(ref.read(apiClientProvider)));
+    >((ref) => FileManagerController(FileService(ref.read(apiClientProvider))));
 
 class FileManagerController
     extends StateNotifier<ResourceState<List<ManagedFile>>> {
-  FileManagerController(this._api) : super(const ResourceState()) {
+  FileManagerController(this._service) : super(const ResourceState()) {
     unawaited(load());
   }
 
-  final ApiClient _api;
+  final FileService _service;
   String query = '';
   String sort = 'date';
   bool descending = true;
@@ -30,7 +31,7 @@ class FileManagerController
     descending = desc ?? descending;
     state = const ResourceState(status: ResourceStatus.loading);
     try {
-      final files = await _api.files(
+      final files = await _service.list(
         search: query.isEmpty ? null : query,
         sort: sort,
         descending: descending,
@@ -48,15 +49,15 @@ class FileManagerController
   }
 
   Future<void> rename(String id, String filename) async =>
-      _apply(id, () => _api.renameFile(id, filename));
+      _apply(id, () => _service.rename(id, filename));
   Future<void> move(String id, String folder) async =>
-      _apply(id, () => _api.moveFile(id, folder));
-  Future<void> open(String id) async => _apply(id, () => _api.openFile(id));
-  Future<void> share(String id) async => _apply(id, () => _api.shareFile(id));
+      _apply(id, () => _service.move(id, folder));
+  Future<void> open(String id) async => _apply(id, () => _service.open(id));
+  Future<void> share(String id) async => _apply(id, () => _service.share(id));
 
   Future<void> favorite(String id, bool value) async {
     try {
-      await _api.setFavorite(id, value);
+      await _service.favorite(id, value);
       final files = [...?state.data];
       final index = files.indexWhere((file) => file.libraryId == id);
       if (index >= 0) {
@@ -77,7 +78,7 @@ class FileManagerController
 
   Future<void> delete(String id) async {
     try {
-      await _api.deleteFile(id);
+      await _service.delete(id);
       state = ResourceState(
         status: ResourceStatus.success,
         data: [...?state.data]..removeWhere((file) => file.libraryId == id),

@@ -3,6 +3,17 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+class BackgroundDownloadEvents {
+  static const created = 'download.created';
+  static const started = 'download.started';
+  static const progress = 'download.progress';
+  static const completed = 'download.completed';
+  static const failed = 'download.failed';
+  static const paused = 'download.paused';
+  static const cancelled = 'download.cancelled';
+  static const notificationTap = 'download.notification_tap';
+}
+
 class BackgroundDownloadEvent {
   const BackgroundDownloadEvent({
     required this.taskId,
@@ -25,8 +36,14 @@ class BackgroundDownloadEvent {
   factory BackgroundDownloadEvent.fromMap(Map<dynamic, dynamic> map) =>
       BackgroundDownloadEvent(
         taskId: map['task_id'] as String? ?? '',
-        event: map['event'] as String? ?? '',
-        progress: int.tryParse('${map['progress'] ?? ''}'),
+        event:
+            (map['event'] as String?) ??
+            (map['open'] == true
+                ? BackgroundDownloadEvents.notificationTap
+                : ''),
+        progress: int.tryParse(
+          '${map['progress_percent'] ?? map['progress'] ?? ''}',
+        ),
         bytesDownloaded: int.tryParse('${map['bytes_downloaded'] ?? ''}'),
         totalBytes: int.tryParse('${map['total_bytes'] ?? ''}'),
         outputPath: map['output_path'] as String?,

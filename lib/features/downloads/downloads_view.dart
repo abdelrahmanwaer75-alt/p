@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/models/models.dart';
 import '../../shared/state/resource_state.dart';
 import 'downloads_controller.dart';
@@ -10,6 +11,7 @@ class DownloadsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppLocalizations.of(context);
     final state = ref.watch(downloadsProvider);
     if (state.status == ResourceStatus.loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -18,28 +20,34 @@ class DownloadsPage extends ConsumerWidget {
         state.status == ResourceStatus.offline ||
         state.status == ResourceStatus.unauthorized) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Downloads')),
-        body: Center(child: Text(state.message ?? 'Unable to load downloads')),
+        appBar: AppBar(title: Text(strings.downloads)),
+        body: Center(
+          child: Text(state.message ?? strings.unableToLoadDownloads),
+        ),
       );
     }
     final tasks = state.data ?? const <DownloadTask>[];
     if (state.status == ResourceStatus.empty) {
-      return const Scaffold(body: Center(child: Text('No downloads')));
+      return Scaffold(body: Center(child: Text(strings.noDownloads)));
     }
     final groups = <String, List<DownloadTask>>{
-      'Active': tasks
+      strings.active: tasks
           .where(
             (task) =>
                 {'starting', 'downloading', 'paused'}.contains(task.status),
           )
           .toList(),
-      'Queued': tasks.where((task) => task.status == 'queued').toList(),
-      'Completed': tasks.where((task) => task.status == 'completed').toList(),
-      'Failed': tasks.where((task) => task.status == 'failed').toList(),
-      'Cancelled': tasks.where((task) => task.status == 'cancelled').toList(),
+      strings.queued: tasks.where((task) => task.status == 'queued').toList(),
+      strings.completed: tasks
+          .where((task) => task.status == 'completed')
+          .toList(),
+      strings.failed: tasks.where((task) => task.status == 'failed').toList(),
+      strings.cancelled: tasks
+          .where((task) => task.status == 'cancelled')
+          .toList(),
     };
     return Scaffold(
-      appBar: AppBar(title: const Text('Downloads')),
+      appBar: AppBar(title: Text(strings.downloads)),
       body: RefreshIndicator(
         onRefresh: () => ref.read(downloadsProvider.notifier).load(),
         child: ListView(
@@ -63,6 +71,7 @@ class DownloadsPage extends ConsumerWidget {
   }
 
   Widget _taskCard(BuildContext context, WidgetRef ref, DownloadTask task) {
+    final strings = AppLocalizations.of(context);
     final known = task.progress != null;
     final progress = known ? task.progress!.clamp(0, 100) / 100 : null;
     return Card(
@@ -98,7 +107,7 @@ class DownloadsPage extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${known ? '${task.progress!.toStringAsFixed(0)}%' : 'Progress unavailable'} · ${_bytes(task.bytesDownloaded)} / ${task.totalBytes == null ? '—' : _bytes(task.totalBytes!)}',
+                  '${known ? '${task.progress!.toStringAsFixed(0)}%' : strings.progressUnavailable} · ${_bytes(task.bytesDownloaded)} / ${task.totalBytes == null ? '—' : _bytes(task.totalBytes!)}',
                 ),
                 Text(
                   task.speed == null
@@ -152,13 +161,24 @@ class DownloadsPage extends ConsumerWidget {
             await controller.delete(task.id);
         }
       },
-      itemBuilder: (_) => [
-        for (final action in actions)
-          PopupMenuItem(
-            value: action,
-            child: Text(action[0].toUpperCase() + action.substring(1)),
-          ),
-      ],
+      itemBuilder: (_) {
+        final strings = AppLocalizations.of(context);
+        final labels = <String, String>{
+          'pause': strings.pause,
+          'resume': strings.resume,
+          'cancel': strings.cancel,
+          'retry': strings.retry,
+          'open': strings.open,
+          'delete': strings.delete,
+        };
+        return [
+          for (final action in actions)
+            PopupMenuItem(
+              value: action,
+              child: Text(labels[action] ?? action),
+            ),
+        ];
+      },
     );
   }
 

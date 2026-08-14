@@ -44,6 +44,30 @@ class AppLocalizations {
   String get completed => isArabic ? 'مكتمل' : 'Completed';
   String get failed => isArabic ? 'فشل' : 'Failed';
   String get cancelled => isArabic ? 'ملغى' : 'Cancelled';
+  String get analyzeTitle => isArabic ? 'تحليل' : 'Analyze';
+  String get mediaUrl => isArabic ? 'رابط الوسائط' : 'Media URL';
+  String get analyzeAction => isArabic ? 'تحليل' : 'Analyze';
+  String get downloadAction => isArabic ? 'تنزيل' : 'Download';
+  String get downloadQueued => isArabic
+      ? 'تمت إضافة التنزيل إلى قائمة الانتظار'
+      : 'Download queued';
+  String get unableToAnalyze => isArabic
+      ? 'تعذر تحليل هذا الرابط'
+      : 'Unable to analyze this URL';
+  String get noVerifiedFormats => isArabic
+      ? 'لا توجد صيغ موثقة متاحة.'
+      : 'No verified formats are available.';
+  String get noDownloads => isArabic ? 'لا توجد تنزيلات' : 'No downloads';
+  String get unableToLoadDownloads => isArabic
+      ? 'تعذر تحميل التنزيلات'
+      : 'Unable to load downloads';
+  String get progressUnavailable => isArabic ? 'التقدم غير متاح' : 'Progress unavailable';
+  String get pause => isArabic ? 'إيقاف مؤقت' : 'Pause';
+  String get resume => isArabic ? 'استئناف' : 'Resume';
+  String get cancel => isArabic ? 'إلغاء' : 'Cancel';
+  String get retry => isArabic ? 'إعادة المحاولة' : 'Retry';
+  String get open => isArabic ? 'فتح' : 'Open';
+  String get delete => isArabic ? 'حذف' : 'Delete';
 }
 
 class _AppLocalizationsDelegate

@@ -14,8 +14,12 @@ class AppTheme {
       seedColor: seedColor,
       brightness: brightness,
     );
-    final text = Typography.material2021(platform: TargetPlatform.android)
-        .black;
+    final typography = Typography.material2021(
+      platform: TargetPlatform.android,
+    );
+    final text = brightness == Brightness.dark
+        ? typography.white
+        : typography.black;
     return ThemeData(
       colorScheme: scheme,
       useMaterial3: true,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../analyzer/analyzer_controller.dart';
 import '../downloads/downloads_controller.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../shared/state/resource_state.dart';
 
 class AnalyzerPage extends ConsumerStatefulWidget {
@@ -21,17 +22,18 @@ class _AnalyzerPageState extends ConsumerState<AnalyzerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final state = ref.watch(analyzerProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Analyze')),
+      appBar: AppBar(title: Text(strings.analyzeTitle)),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           TextField(
             controller: controller,
             keyboardType: TextInputType.url,
-            decoration: const InputDecoration(
-              labelText: 'Media URL',
+            decoration: InputDecoration(
+              labelText: strings.mediaUrl,
               hintText: 'https://vimeo.com/...',
             ),
           ),
@@ -44,26 +46,26 @@ class _AnalyzerPageState extends ConsumerState<AnalyzerPage> {
                       .analyze(controller.text.trim()),
             child: state.status == ResourceStatus.loading
                 ? const CircularProgressIndicator()
-                : const Text('Analyze'),
+                : Text(strings.analyzeAction),
           ),
           const SizedBox(height: 24),
-          _body(state),
+          _body(state, strings),
         ],
       ),
     );
   }
 
-  Widget _body(ResourceState state) {
+  Widget _body(ResourceState state, AppLocalizations strings) {
     if (state.status == ResourceStatus.loading) {
       return const Center(child: CircularProgressIndicator());
     }
     if (state.status == ResourceStatus.error ||
         state.status == ResourceStatus.offline ||
         state.status == ResourceStatus.unauthorized) {
-      return Text(state.message ?? 'Unable to analyze this URL');
+      return Text(state.message ?? strings.unableToAnalyze);
     }
     if (state.status == ResourceStatus.empty) {
-      return Text(state.message ?? 'No verified formats are available.');
+      return Text(state.message ?? strings.noVerifiedFormats);
     }
     final result = state.data;
     if (result == null) return const SizedBox.shrink();
@@ -84,7 +86,7 @@ class _AnalyzerPageState extends ConsumerState<AnalyzerPage> {
               subtitle: Text(format.kind),
               trailing: FilledButton(
                 onPressed: () => _queue(result, format),
-                child: const Text('Download'),
+                child: Text(strings.downloadAction),
               ),
             ),
           ),
@@ -97,8 +99,9 @@ class _AnalyzerPageState extends ConsumerState<AnalyzerPage> {
         .read(downloadsProvider.notifier)
         .queue(result, format, authorized: true);
     if (mounted && task != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Download queued')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).downloadQueued)),
+      );
     }
   }
 }

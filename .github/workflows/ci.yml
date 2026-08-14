@@ -111,6 +111,9 @@ jobs:
       - name: Run Freezed and json_serializable generation
         run: dart run build_runner build --delete-conflicting-outputs
       - run: dart format --output=none --set-exit-if-changed .
+      - name: Show formatter diff when formatting fails
+        if: failure()
+        run: git diff -- lib/core/localization/app_localizations.dart lib/features/downloads/downloads_view.dart
       - run: flutter analyze
       - run: flutter test
 

@@ -5,6 +5,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    volumes:
+      - media_data:/app/data/media
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
@@ -42,6 +44,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    volumes:
+      - media_data:/app/data/media
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
@@ -60,13 +64,16 @@ services:
       JWT_AUDIENCE: ${JWT_AUDIENCE:-vidora-client}
       ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
       REFRESH_TOKEN_TTL_SECONDS: ${REFRESH_TOKEN_TTL_SECONDS:-2592000}
+      WORKER_READY_FILE: /tmp/vidora-worker.ready
     depends_on:
       api:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "python -c 'import os; print(\"ok\")'"]
+      test: ["CMD-SHELL", "python -c 'from pathlib import Path; import time; p=Path(\"/tmp/vidora-worker.ready\"); raise SystemExit(0 if p.exists() and time.time()-p.stat().st_mtime < 30 else 1)'" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -107,3 +114,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  media_data:

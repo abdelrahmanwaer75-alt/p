@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     download_directory: str = "backend/data/media"
     auto_create_db: bool = True
+    db_pool_size: int = Field(default=5, ge=1, le=100)
+    db_max_overflow: int = Field(default=10, ge=0, le=200)
+    db_pool_timeout_seconds: int = Field(default=30, ge=1, le=300)
+    db_pool_recycle_seconds: int = Field(default=1800, ge=60, le=86400)
     jwt_secret: str = Field(default=DEFAULT_DEV_JWT_SECRET, min_length=32)
     jwt_issuer: str = "vidora-api"
     jwt_audience: str = "vidora-client"
@@ -34,6 +38,10 @@ class Settings(BaseSettings):
         if self.environment.lower() in {"production", "prod"}:
             if self.jwt_secret in INSECURE_JWT_SECRETS or len(self.jwt_secret) < 32:
                 raise ValueError("JWT_SECRET must be a strong, non-default secret in production")
+            if self.database_url.lower().startswith("sqlite"):
+                raise ValueError("SQLite is only supported for isolated development/test mode; configure PostgreSQL in production")
+            if self.auto_create_db:
+                raise ValueError("AUTO_CREATE_DB must be false in production; run Alembic migrations explicitly")
             if not self.jwt_issuer.strip() or not self.jwt_audience.strip():
                 raise ValueError("JWT issuer and audience must be configured in production")
             if "*" in self.cors_origins or any(origin.startswith("http://") for origin in self.cors_origins):

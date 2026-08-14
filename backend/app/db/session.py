@@ -151,8 +151,18 @@ def _engine_url() -> str:
     return url
 
 
-connect_args = {"check_same_thread": False} if _engine_url().startswith("sqlite") else {}
-engine = create_engine(_engine_url(), future=True, pool_pre_ping=True, connect_args=connect_args)
+_resolved_engine_url = _engine_url()
+connect_args = {"check_same_thread": False} if _resolved_engine_url.startswith("sqlite") else {}
+_engine_options = {"future": True, "pool_pre_ping": True, "connect_args": connect_args}
+if not _resolved_engine_url.startswith("sqlite"):
+    _settings = get_settings()
+    _engine_options.update(
+        pool_size=_settings.db_pool_size,
+        max_overflow=_settings.db_max_overflow,
+        pool_timeout=_settings.db_pool_timeout_seconds,
+        pool_recycle=_settings.db_pool_recycle_seconds,
+    )
+engine = create_engine(_resolved_engine_url, **_engine_options)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
 
@@ -165,4 +175,7 @@ def get_session() -> Generator:
 
 
 def init_database() -> None:
+    settings = get_settings()
+    if settings.environment.lower() in {"production", "prod"}:
+        raise RuntimeError("Production schema must be managed by Alembic; init_database is disabled")
     Base.metadata.create_all(bind=engine)

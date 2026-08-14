@@ -90,3 +90,19 @@ The backend was reorganized in place. `main.py` is now wiring-only; route handle
 | Test layout | Tests grouped under api, services, repositories, queue, security, and integration |
 
 The only test output warning is an upstream Starlette/httpx deprecation warning. Runtime Docker, PostgreSQL, Redis, and device-level deployment checks remain environment-specific.
+
+## Database and persistent media storage hardening update
+
+Production database configuration now rejects SQLite, disables `AUTO_CREATE_DB`, and uses PostgreSQL through the same `DATABASE_URL` in API and worker Compose services. SQLAlchemy uses `pool_pre_ping` plus configurable pool size, overflow, timeout, and recycle settings. Alembic normalizes async PostgreSQL URLs, enables type comparison, and runs each migration transactionally where the backend supports it.
+
+`MediaStorage` is the named storage boundary over the existing safe filesystem implementation. It derives its default root from `DOWNLOAD_DIRECTORY`, provides `save`, `delete`, `move`, `rename`, `exists`, `get_path`, and `get_metadata`, and canonicalizes paths to reject absolute escapes, traversal, and symlink escapes. Compose now mounts the persistent `media_data` named volume into both API and worker while retaining a read-only container root.
+
+The API exposes `/health` for liveness and `/ready` for PostgreSQL/Redis readiness. The worker writes `/tmp/vidora-worker.ready` only after both dependencies respond, and the worker healthcheck verifies marker freshness. Docker validation could not run because Docker is not installed in the execution environment; Compose configuration was reviewed statically.
+
+| Validation | Result |
+|---|---:|
+| `PYTHONPATH=backend pytest -q` | **68 passed** |
+| `python3 -m compileall -q backend` | Passed |
+| `alembic upgrade head` on isolated SQLite test database | Passed through revision `0006` |
+| `git diff --check` | Passed |
+| Docker Compose config/build | Not run: Docker unavailable |

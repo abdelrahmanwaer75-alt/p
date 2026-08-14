@@ -6,6 +6,8 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.core.config import get_settings
+
 
 _SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._ -]{0,254}$")
 
@@ -24,8 +26,9 @@ class FileMetadata:
 class StorageService:
     """All media filesystem access goes through a single managed root."""
 
-    def __init__(self, root: str = "backend/data/media") -> None:
-        self.root = Path(root).expanduser().resolve()
+    def __init__(self, root: str | None = None) -> None:
+        configured_root = root if root is not None else get_settings().download_directory
+        self.root = Path(configured_root).expanduser().resolve()
         self.root.mkdir(parents=True, exist_ok=True)
 
     def _safe_filename(self, filename: str) -> str:
@@ -87,6 +90,9 @@ class StorageService:
     def exists(self, path: str | Path) -> bool:
         return self._managed(path).exists()
 
+    def get_path(self, path: str | Path) -> Path:
+        return self._managed(path)
+
     def metadata(self, path: str | Path) -> FileMetadata:
         target = self._managed(path)
         stat = target.stat()
@@ -94,8 +100,18 @@ class StorageService:
         mime_type = {"mp4": "video/mp4", "mkv": "video/x-matroska", "webm": "video/webm", "mp3": "audio/mpeg", "m4a": "audio/mp4"}.get(extension)
         return FileMetadata(path=str(target), filename=target.name, size=stat.st_size if target.is_file() else 0, mime_type=mime_type, extension=extension, modified_at=stat.st_mtime, is_directory=target.is_dir())
 
+    def get_metadata(self, path: str | Path) -> FileMetadata:
+        return self.metadata(path)
+
     def available_space(self) -> int:
         return shutil.disk_usage(self.root).free
 
     def relative_path(self, path: str | Path) -> str:
         return str(self._managed(path).relative_to(self.root))
+
+
+class MediaStorage(StorageService):
+    """Named media-storage boundary used by API and worker processes."""
+
+
+__all__ = ["FileMetadata", "StorageService", "MediaStorage"]

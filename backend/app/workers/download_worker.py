@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from collections.abc import Callable
 from datetime import datetime, timezone
 from uuid import UUID
+from pathlib import Path
+
+from sqlalchemy import text
+from app.db import engine
 
 from app.core.config import get_settings
 from app.db import init_database
@@ -201,6 +206,30 @@ async def process_once(
         return True
 
 
+def _worker_ready_file() -> Path:
+    return Path(os.getenv("WORKER_READY_FILE", "/tmp/vidora-worker.ready"))
+
+
+def _set_worker_ready(ready: bool) -> None:
+    marker = _worker_ready_file()
+    if ready:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch()
+    elif marker.exists():
+        marker.unlink()
+
+
+def _dependencies_ready(queue: DownloadQueue) -> bool:
+    if not queue.ping():
+        return False
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
+
+
 async def run_forever() -> None:
     settings = get_settings()
     queue = DownloadQueue(settings.redis_url)
@@ -208,10 +237,16 @@ async def run_forever() -> None:
         init_database()
     repository = DownloadRepository()
     library_repository = LibraryRepository()
+    last_readiness_check = 0.0
     while True:
+        now_monotonic = asyncio.get_running_loop().time()
+        if now_monotonic - last_readiness_check >= 5:
+            _set_worker_ready(_dependencies_ready(queue))
+            last_readiness_check = now_monotonic
         try:
             await process_once(queue, repository, library_repository=library_repository)
         except QueueUnavailable:
+            _set_worker_ready(False)
             logger.error("Redis Streams unavailable; worker will retry without losing pending messages")
             await asyncio.sleep(2)
         await asyncio.sleep(0.1)

@@ -112,3 +112,11 @@ The backend now follows the same modular boundaries as the Flutter client. `app/
 Redis Streams is isolated under `app/queue`, filesystem access under `app/storage`, and worker execution under `app/workers/download_worker.py`; `backend/worker.py` remains a compatibility entrypoint. Platform extractors now live in per-platform subpackages. Existing legacy imports remain available through compatibility exports so the refactor does not change public behavior.
 
 Backend QA after the modularization passed with `65 passed`; `python3 -m compileall -q backend` also passed. The suite retains one upstream Starlette/httpx deprecation warning that does not affect test results.
+
+## Database and persistent storage hardening
+
+Production uses PostgreSQL as the shared source of truth for the API and worker. SQLAlchemy now enables PostgreSQL connection pooling with pre-ping, bounded overflow, timeout, and recycle settings. SQLite remains available only for isolated development and tests; production settings reject SQLite and disable `AUTO_CREATE_DB`, while Alembic remains the schema authority.
+
+Media files use the `MediaStorage` boundary and the configured `DOWNLOAD_DIRECTORY`. The production Compose deployment mounts the same named `media_data` volume into both API and worker at `/app/data/media`, alongside persistent PostgreSQL and Redis volumes. The application keeps a read-only container root while the media volume and `/tmp` remain writable where needed.
+
+`/health` is a liveness endpoint. `/ready` verifies both PostgreSQL and Redis and returns HTTP 503 when either dependency is unavailable. The worker writes a readiness marker only after it can reach both PostgreSQL and Redis; its container healthcheck validates the marker freshness rather than merely checking that Python started.

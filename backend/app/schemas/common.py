@@ -11,6 +11,13 @@ class HealthResponse(BaseModel):
     timestamp: datetime
 
 
+class ReadinessResponse(BaseModel):
+    status: Literal["ready", "not_ready"]
+    database: Literal["ok", "error"]
+    redis: Literal["ok", "error"]
+    timestamp: datetime
+
+
 class VersionResponse(BaseModel):
     name: str
     version: str

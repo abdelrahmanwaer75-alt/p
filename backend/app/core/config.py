@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://vidora:vidora@localhost:5432/vidora"
     redis_url: str = "redis://localhost:6379/0"
     jwt_secret: str = Field(default="change-me-in-production", min_length=16)
+    download_db_path: str = "backend/data/vidora_downloads.db"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

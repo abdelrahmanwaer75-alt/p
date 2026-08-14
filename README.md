@@ -44,3 +44,7 @@ Vidora must only process media that the user is authorized to download and that 
 ## Phase 4 download engine foundation
 
 The backend now exposes a queue-oriented download task contract under `/api/v1/downloads`. Tasks require an explicit authorization confirmation, start in `queued` state, and report `progress_percent: null` with `progress_known: false` until a real worker can provide measured progress. The worker boundary deliberately refuses to execute until an authorized, policy-aware adapter is configured. No raw shell command, subprocess, DRM circumvention, CAPTCHA bypass, or fabricated progress is present.
+
+## Persistent download storage
+
+Download tasks are now stored in SQLite through `backend/app/repositories/downloads.py`, rather than only in process memory. The default local database is `backend/data/vidora_downloads.db`, which is created automatically and excluded from source control. The repository boundary can later be replaced by PostgreSQL without changing the API contract.

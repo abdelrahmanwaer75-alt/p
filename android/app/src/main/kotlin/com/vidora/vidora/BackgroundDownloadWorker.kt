@@ -47,7 +47,7 @@ class BackgroundDownloadWorker(appContext: Context, params: WorkerParameters) : 
                 val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                 while (true) {
                     ensureActive()
-                    if (isCancelled || isPaused(taskId)) {
+                    if (isStopped || isPaused(taskId)) {
                         emit(taskId, if (isPaused(taskId)) "paused" else "cancelled", downloaded, output.absolutePath)
                         return@withContext if (isPaused(taskId)) Result.retry() else Result.failure()
                     }

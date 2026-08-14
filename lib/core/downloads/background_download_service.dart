@@ -23,6 +23,7 @@ class BackgroundDownloadEvent {
     this.totalBytes,
     this.outputPath,
     this.errorCode,
+    this.sha256,
     this.open = false,
   });
   final String taskId;
@@ -32,24 +33,29 @@ class BackgroundDownloadEvent {
   final int? totalBytes;
   final String? outputPath;
   final String? errorCode;
+  final String? sha256;
   final bool open;
-  factory BackgroundDownloadEvent.fromMap(Map<dynamic, dynamic> map) =>
-      BackgroundDownloadEvent(
-        taskId: map['task_id'] as String? ?? '',
-        event:
-            (map['event'] as String?) ??
-            (map['open'] == true
-                ? BackgroundDownloadEvents.notificationTap
-                : ''),
-        progress: int.tryParse(
-          '${map['progress_percent'] ?? map['progress'] ?? ''}',
-        ),
-        bytesDownloaded: int.tryParse('${map['bytes_downloaded'] ?? ''}'),
-        totalBytes: int.tryParse('${map['total_bytes'] ?? ''}'),
-        outputPath: map['output_path'] as String?,
-        errorCode: map['error_code'] as String?,
-        open: map['open'] == true,
-      );
+  factory BackgroundDownloadEvent.fromMap(Map<dynamic, dynamic> map) {
+    final rawEvent =
+        (map['event'] as String?) ??
+        (map['open'] == true ? BackgroundDownloadEvents.notificationTap : '');
+    final normalizedEvent = rawEvent.isEmpty || rawEvent.startsWith('download.')
+        ? rawEvent
+        : 'download.$rawEvent';
+    return BackgroundDownloadEvent(
+      taskId: map['task_id'] as String? ?? '',
+      event: normalizedEvent,
+      progress: int.tryParse(
+        '${map['progress_percent'] ?? map['progress'] ?? ''}',
+      ),
+      bytesDownloaded: int.tryParse('${map['bytes_downloaded'] ?? ''}'),
+      totalBytes: int.tryParse('${map['total_bytes'] ?? ''}'),
+      outputPath: map['output_path'] as String?,
+      errorCode: map['error_code'] as String?,
+      sha256: map['sha256'] as String?,
+      open: map['open'] == true,
+    );
+  }
 }
 
 class BackgroundDownloadService {

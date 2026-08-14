@@ -90,8 +90,7 @@ class DownloadsController
   void _handleBackgroundEvent(BackgroundDownloadEvent event) {
     // Native transfer completion is only a signal. The backend remains the
     // authority after ownership, output, and task state are verified.
-    if (event.event == BackgroundDownloadEvents.completed ||
-        event.event == 'completed') {
+    if (_isTerminalEvent(event.event)) {
       unawaited(load());
       return;
     }
@@ -128,7 +127,7 @@ class DownloadsController
       final taskId = json['task_id'] as String?;
       if (taskId == null) return;
       final event = json['event'] as String? ?? '';
-      if (event == BackgroundDownloadEvents.completed || event == 'completed') {
+      if (_isTerminalEvent(event)) {
         unawaited(load());
         return;
       }
@@ -198,6 +197,14 @@ class DownloadsController
       );
     }
   }
+
+  bool _isTerminalEvent(String event) =>
+      event == BackgroundDownloadEvents.completed ||
+      event == BackgroundDownloadEvents.failed ||
+      event == BackgroundDownloadEvents.cancelled ||
+      event == 'completed' ||
+      event == 'failed' ||
+      event == 'cancelled';
 
   void _applyEvent(
     String taskId,

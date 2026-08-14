@@ -41,11 +41,11 @@ import UserNotifications
 
 private final class IOSDownloadEventHandler: NSObject, FlutterStreamHandler {
   func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-    BackgroundDownloadService.shared.emit = { payload in events(payload) }
+    BackgroundDownloadService.shared.setEmitter { payload in events(payload) }
     return nil
   }
   func onCancel(withArguments arguments: Any?) -> FlutterError? {
-    BackgroundDownloadService.shared.emit = nil
+    BackgroundDownloadService.shared.setEmitter(nil)
     return nil
   }
 }

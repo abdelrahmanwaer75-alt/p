@@ -5,15 +5,17 @@ void main() {
   test('parses worker progress_percent and byte counters', () {
     final event = BackgroundDownloadEvent.fromMap({
       'task_id': 'task-1',
-      'event': BackgroundDownloadEvents.progress,
+      'event': 'progress',
       'progress_percent': 42,
       'bytes_downloaded': 420,
       'total_bytes': 1000,
+      'sha256': 'abc123',
     });
     expect(event.event, BackgroundDownloadEvents.progress);
     expect(event.progress, 42);
     expect(event.bytesDownloaded, 420);
     expect(event.totalBytes, 1000);
+    expect(event.sha256, 'abc123');
   });
 
   test('normalizes notification tap when native omits event name', () {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'core_api.dart';
@@ -21,11 +23,25 @@ class DownloadsPage extends StatefulWidget {
 
 class _DownloadsPageState extends State<DownloadsPage> {
   late Future<List<DownloadTask>> future;
+  Timer? _poller;
 
   @override
   void initState() {
     super.initState();
     future = widget.api.downloads();
+    _poller = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        setState(() {
+          future = widget.api.downloads();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _poller?.cancel();
+    super.dispose();
   }
 
   @override

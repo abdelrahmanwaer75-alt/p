@@ -9,13 +9,11 @@ from app.schemas.analyzer import AnalyzerResult, MediaKind, Platform
 
 
 PLATFORM_HOSTS: dict[Platform, set[str]] = {
-    Platform.YOUTUBE: {"youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com"},
-    Platform.TIKTOK: {"tiktok.com", "www.tiktok.com", "vm.tiktok.com"},
-    Platform.INSTAGRAM: {"instagram.com", "www.instagram.com"},
-    Platform.FACEBOOK: {"facebook.com", "www.facebook.com", "fb.watch"},
-    Platform.X: {"x.com", "www.x.com", "twitter.com", "www.twitter.com"},
     Platform.REDDIT: {"reddit.com", "www.reddit.com", "old.reddit.com"},
     Platform.VIMEO: {"vimeo.com", "www.vimeo.com"},
+    Platform.DAILYMOTION: {"dailymotion.com", "www.dailymotion.com", "dai.ly"},
+    Platform.SOUNDCLOUD: {"soundcloud.com", "www.soundcloud.com"},
+    Platform.TWITCH: {"twitch.tv", "www.twitch.tv"},
 }
 
 

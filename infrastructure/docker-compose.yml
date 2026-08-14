@@ -7,12 +7,19 @@ services:
       LOG_LEVEL: INFO
       DATABASE_URL: postgresql+asyncpg://vidora:vidora@postgres:5432/vidora
       REDIS_URL: redis://redis:6379/0
-      JWT_SECRET: change-me-in-development-secret-32
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the environment}
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   worker:
     build:
@@ -23,9 +30,15 @@ services:
       LOG_LEVEL: INFO
       DOWNLOAD_DB_PATH: /app/data/vidora_downloads.db
       REDIS_URL: redis://redis:6379/0
-      JWT_SECRET: change-me-in-development-secret-32
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the environment}
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import os; print(\"ok\")'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres:
     image: postgres:16-alpine
@@ -35,12 +48,22 @@ services:
       POSTGRES_DB: vidora
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vidora -d vidora"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

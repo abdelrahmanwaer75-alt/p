@@ -70,11 +70,13 @@ async def login_account(payload: LoginRequest) -> TokenResponse:
     return login(payload)
 
 
+@api.get("/user/me", response_model=UserResponse, tags=["auth"])
 @api.get("/auth/me", response_model=UserResponse, tags=["auth"])
 async def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> UserResponse:
     return current_user(credentials)
 
 
+@api.post("/analyze", response_model=AnalyzerResult, tags=["analyzer"])
 @api.post("/analyzer/preview", response_model=AnalyzerResult, tags=["analyzer"])
 async def analyzer_preview(payload: AnalyzeRequest) -> AnalyzerResult:
     """Validate a public URL and identify its platform without fetching content."""
@@ -86,6 +88,7 @@ async def create_library_item(payload: LibraryItemCreate, user: UserResponse = D
     return library_repository.create(user.id, payload)
 
 
+@api.get("/files", response_model=list[LibraryItem], tags=["library"])
 @api.get("/library", response_model=list[LibraryItem], tags=["library"])
 async def list_library(user: UserResponse = Depends(get_current_user)) -> list[LibraryItem]:
     return library_repository.list(user.id)

@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     download_db_path: str = "backend/data/vidora_downloads.db"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    @model_validator(mode="after")
+    def validate_runtime_security(self) -> "Settings":
+        if self.environment.lower() in {"production", "prod"} and self.jwt_secret == "change-me-in-development-secret-32":
+            raise ValueError("JWT_SECRET must be changed in production")
+        return self
 
     @property
     def cors_origins(self) -> list[str]:

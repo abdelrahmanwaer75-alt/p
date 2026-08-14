@@ -5,13 +5,11 @@ from pydantic import BaseModel, Field, HttpUrl
 
 
 class Platform(StrEnum):
-    YOUTUBE = "youtube"
-    TIKTOK = "tiktok"
-    INSTAGRAM = "instagram"
-    FACEBOOK = "facebook"
-    X = "x"
     REDDIT = "reddit"
     VIMEO = "vimeo"
+    DAILYMOTION = "dailymotion"
+    SOUNDCLOUD = "soundcloud"
+    TWITCH = "twitch"
     GENERIC = "generic"
 
 

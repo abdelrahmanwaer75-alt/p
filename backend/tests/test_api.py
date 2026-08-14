@@ -27,13 +27,20 @@ def test_version() -> None:
 
 
 def test_analyzer_preview_detects_platform_without_fetching() -> None:
-    response = client.post("/api/v1/analyzer/preview", json={"url": "https://www.youtube.com/watch?v=abc"})
+    response = client.post("/api/v1/analyzer/preview", json={"url": "https://vimeo.com/123456"})
     assert response.status_code == 200
     body = response.json()
-    assert body["platform"] == "youtube"
+    assert body["platform"] == "vimeo"
     assert body["supported"] is False
     assert "configured yet" in body["message"]
     assert body["formats"] == []
+
+
+def test_prohibited_youtube_is_generic_and_not_supported() -> None:
+    response = client.post("/api/v1/analyzer/preview", json={"url": "https://www.youtube.com/watch?v=abc"})
+    assert response.status_code == 200
+    assert response.json()["platform"] == "generic"
+    assert response.json()["supported"] is False
 
 
 def test_analyzer_preview_rejects_private_network_url() -> None:

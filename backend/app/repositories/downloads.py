@@ -84,6 +84,11 @@ class DownloadRepository:
             row = connection.execute("SELECT * FROM download_tasks WHERE id = ? AND owner_id = ?", (str(task_id), str(owner_id))).fetchone()
         return self._from_row(row) if row else None
 
+    def get_any(self, task_id: UUID) -> DownloadTask | None:
+        with self._connect() as connection:
+            row = connection.execute("SELECT * FROM download_tasks WHERE id = ?", (str(task_id),)).fetchone()
+        return self._from_row(row) if row else None
+
     def list(self, owner_id: UUID) -> list[DownloadTask]:
         with self._connect() as connection:
             rows = connection.execute("SELECT * FROM download_tasks WHERE owner_id = ? ORDER BY created_at DESC", (str(owner_id),)).fetchall()

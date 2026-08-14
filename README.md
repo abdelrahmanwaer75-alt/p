@@ -48,3 +48,9 @@ The backend now exposes a queue-oriented download task contract under `/api/v1/d
 ## Persistent download storage
 
 Download tasks are now stored in SQLite through `backend/app/repositories/downloads.py`, rather than only in process memory. The default local database is `backend/data/vidora_downloads.db`, which is created automatically and excluded from source control. The repository boundary can later be replaced by PostgreSQL without changing the API contract.
+
+## Redis download queue
+
+Download creation now persists the task and publishes its identifier to the Redis list `vidora:downloads`. The worker entrypoint is `backend/worker.py`; in the Compose stack it runs as a separate `worker` service. The worker consumes task IDs and records a measured terminal failure when no authorized platform adapter is configured. It never fabricates progress and never executes raw shell commands.
+
+For local Compose development, start the stack with `docker compose -f infrastructure/docker-compose.yml up --build`. The API is available on port 8000. Production deployments must replace the development JWT secret and configure an authorized extractor adapter before enabling real media execution.

@@ -81,7 +81,7 @@ async def analyzer_preview(payload: AnalyzeRequest) -> AnalyzerResult:
 @api.post("/downloads", response_model=DownloadTaskAccepted, status_code=202, tags=["downloads"])
 async def create_download(payload: DownloadTaskCreate, user: UserResponse = Depends(get_current_user)) -> DownloadTaskAccepted:
     task = get_download_service().create(payload, user.id)
-    return DownloadTaskAccepted(task=task, message="Download queued for the authenticated account. No worker adapter is enabled in this phase.")
+    return DownloadTaskAccepted(task=task, message="Download queued for the authenticated account. A background worker will process it when an authorized adapter is available.")
 
 
 @api.get("/downloads", response_model=list[DownloadTask], tags=["downloads"])

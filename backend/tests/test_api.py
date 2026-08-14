@@ -79,5 +79,5 @@ def test_download_is_queued_without_fake_progress() -> None:
 
     run_response = client.post(f"/api/v1/downloads/{task['id']}/run", headers=headers)
     assert run_response.status_code == 200
-    assert run_response.json()["status"] == "failed"
-    assert "No authorized download adapter" in run_response.json()["error_message"]
+    assert run_response.json()["status"] == "queued"
+    assert run_response.json()["progress_percent"] is None

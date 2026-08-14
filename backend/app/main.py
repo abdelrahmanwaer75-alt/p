@@ -1,7 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import APIRouter, Depends, FastAPI, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -13,11 +13,14 @@ from app.schemas.analyzer import AnalyzerResult
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from app.schemas.common import AnalyzeRequest, HealthResponse, VersionResponse, utc_now
 from app.schemas.downloads import DownloadTask, DownloadTaskAccepted, DownloadTaskCreate
+from app.schemas.library import FavoriteUpdate, LibraryItem, LibraryItemCreate
+from app.repositories.library import LibraryRepository
 from app.services.analyzer import build_preview
 from app.services.auth import bearer, current_user, login, register
 from app.services.downloads import get_download_service
 
 settings = get_settings()
+library_repository = LibraryRepository(settings.download_db_path)
 logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("vidora.api")
 
@@ -76,6 +79,42 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials | None = De
 async def analyzer_preview(payload: AnalyzeRequest) -> AnalyzerResult:
     """Validate a public URL and identify its platform without fetching content."""
     return build_preview(str(payload.url))
+
+
+@api.post("/library", response_model=LibraryItem, status_code=201, tags=["library"])
+async def create_library_item(payload: LibraryItemCreate, user: UserResponse = Depends(get_current_user)) -> LibraryItem:
+    return library_repository.create(user.id, payload)
+
+
+@api.get("/library", response_model=list[LibraryItem], tags=["library"])
+async def list_library(user: UserResponse = Depends(get_current_user)) -> list[LibraryItem]:
+    return library_repository.list(user.id)
+
+
+@api.get("/favorites", response_model=list[LibraryItem], tags=["library"])
+async def list_favorites(user: UserResponse = Depends(get_current_user)) -> list[LibraryItem]:
+    return library_repository.list(user.id, favorites_only=True)
+
+
+@api.get("/history", response_model=list[LibraryItem], tags=["library"])
+async def list_history(user: UserResponse = Depends(get_current_user)) -> list[LibraryItem]:
+    return library_repository.list(user.id, history_only=True)
+
+
+@api.post("/library/{item_id}/favorite", response_model=LibraryItem, tags=["library"])
+async def update_favorite(item_id: UUID, payload: FavoriteUpdate, user: UserResponse = Depends(get_current_user)) -> LibraryItem:
+    item = library_repository.set_favorite(user.id, item_id, payload.favorite)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Library item not found")
+    return item
+
+
+@api.post("/library/{item_id}/view", response_model=LibraryItem, tags=["library"])
+async def mark_library_viewed(item_id: UUID, user: UserResponse = Depends(get_current_user)) -> LibraryItem:
+    item = library_repository.mark_viewed(user.id, item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Library item not found")
+    return item
 
 
 @api.post("/downloads", response_model=DownloadTaskAccepted, status_code=202, tags=["downloads"])

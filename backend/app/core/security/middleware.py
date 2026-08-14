@@ -16,6 +16,10 @@ logger = logging.getLogger("vidora.security")
 settings = get_settings()
 
 
+class RateLimitBackendUnavailable(RuntimeError):
+    """Raised when production cannot reach the shared rate-limit backend."""
+
+
 class RateLimiter:
     def __init__(self) -> None:
         self._local: dict[str, deque[float]] = defaultdict(deque)
@@ -34,8 +38,11 @@ class RateLimiter:
                 if count == 1:
                     await self._redis.expire(redis_key, 65)
                 return count <= limit, max(0, limit - count)
-            except Exception:
-                logger.warning("Rate-limit backend unavailable; using bounded local fallback")
+            except Exception as exc:
+                logger.warning("Rate-limit backend unavailable")
+                if settings.environment.lower() in {"production", "prod"}:
+                    raise RateLimitBackendUnavailable from exc
+
         bucket = self._local[key]
         cutoff = time.monotonic() - 60
         while bucket and bucket[0] < cutoff:
@@ -54,32 +61,85 @@ def _client_key(request: Request) -> str:
     return client.replace("/", "_")[:128]
 
 
+def _rate_limit_policy(path: str, method: str) -> tuple[str, int]:
+    if path.startswith("/api/v1/auth/"):
+        return "auth", settings.auth_rate_limit_per_minute
+    if path in {"/api/v1/analyze", "/api/v1/analyzer/preview"}:
+        return "analyzer", settings.analyzer_rate_limit_per_minute
+    if path == "/api/v1/downloads" and method.upper() == "POST":
+        return "download_create", settings.download_rate_limit_per_minute
+    return "api", settings.rate_limit_per_minute
+
+
 async def security_middleware(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
     request.state.request_id = request_id
     path = request.url.path
     task_match = re.search(r"/downloads/([0-9a-fA-F-]{36})", path)
     request.state.task_id = task_match.group(1) if task_match else None
-    is_auth = path.startswith("/api/v1/auth/")
-    limit = settings.auth_rate_limit_per_minute if is_auth else settings.rate_limit_per_minute
-    allowed, remaining = await rate_limiter.allowed(f"{_client_key(request)}:{'auth' if is_auth else 'api'}", limit)
-    if not allowed:
-        response = JSONResponse(status_code=429, content={"error": {"code": "rate_limited", "message": "Too many requests", "request_id": request_id}}, headers={"Retry-After": "60", "X-Request-ID": request_id, "X-RateLimit-Limit": str(limit), "X-RateLimit-Remaining": "0"})
+    bucket, limit = _rate_limit_policy(path, request.method)
+    try:
+        allowed, remaining = await rate_limiter.allowed(
+            f"{_client_key(request)}:{bucket}", limit
+        )
+    except RateLimitBackendUnavailable:
+        response = JSONResponse(
+            status_code=503,
+            content={
+                "error": {
+                    "code": "rate_limit_backend_unavailable",
+                    "message": "Rate limiting is temporarily unavailable",
+                    "request_id": request_id,
+                }
+            },
+            headers={"Retry-After": "30", "X-Request-ID": request_id},
+        )
     else:
-        try:
-            response = await call_next(request)
-        except Exception:
-            logger.exception("Unhandled request failure request_id=%s path=%s", request_id, path)
-            raise
-        logger.info("request_complete request_id=%s user_id=%s task_id=%s method=%s path=%s status=%s", request_id, getattr(request.state, "user_id", "anonymous"), getattr(request.state, "task_id", None), request.method, path, response.status_code)
-        response.headers["X-Request-ID"] = request_id
-        response.headers["X-RateLimit-Limit"] = str(limit)
-        response.headers["X-RateLimit-Remaining"] = str(remaining)
+        if not allowed:
+            response = JSONResponse(
+                status_code=429,
+                content={
+                    "error": {
+                        "code": "rate_limited",
+                        "message": "Too many requests",
+                        "request_id": request_id,
+                    }
+                },
+                headers={
+                    "Retry-After": "60",
+                    "X-Request-ID": request_id,
+                    "X-RateLimit-Limit": str(limit),
+                    "X-RateLimit-Remaining": "0",
+                },
+            )
+        else:
+            try:
+                response = await call_next(request)
+            except Exception:
+                logger.exception(
+                    "Unhandled request failure request_id=%s path=%s",
+                    request_id,
+                    path,
+                )
+                raise
+            logger.info(
+                "request_complete request_id=%s user_id=%s task_id=%s method=%s path=%s status=%s",
+                request_id,
+                getattr(request.state, "user_id", "anonymous"),
+                getattr(request.state, "task_id", None),
+                request.method,
+                path,
+                response.status_code,
+            )
+            response.headers["X-Request-ID"] = request_id
+            response.headers["X-RateLimit-Limit"] = str(limit)
+            response.headers["X-RateLimit-Remaining"] = str(remaining)
+
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    response.headers["Cache-Control"] = "no-store" if is_auth else "private, no-cache"
+    response.headers["Cache-Control"] = "no-store" if bucket == "auth" else "private, no-cache"
     if settings.environment.lower() in {"production", "prod"}:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response

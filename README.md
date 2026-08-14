@@ -176,3 +176,5 @@ The CI pipeline was validated against the current source rather than previous re
 The backend test dependency now requires a non-vulnerable pytest release range. Ruff runs an explicit E4/E7/E9/F baseline with documented compatibility-export exceptions, mypy runs against the typed core/database/storage layers, and pip-audit checks only the declared backend requirements manifest. The PostgreSQL/Redis integration job uses real service containers and the dedicated integration test is skipped only in ordinary local runs where those service URLs are not provided.
 
 For the exact per-platform authorized download status and the conditions required before enabling an adapter, see [`AUTHORIZED_DOWNLOAD_REPORT.md`](AUTHORIZED_DOWNLOAD_REPORT.md).
+
+For the complete authentication, JWT, authorization, rate-limit, WebSocket isolation, and sensitive-logging audit, see [`AUTH_SECURITY_AUDIT.md`](AUTH_SECURITY_AUDIT.md).

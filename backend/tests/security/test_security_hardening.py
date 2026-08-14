@@ -33,6 +33,18 @@ def test_production_rejects_insecure_cors_and_secret():
         Settings(environment="production", jwt_secret="a" * 64, allowed_origins="http://app.example")
 
 
+def test_production_rejects_local_redis_rate_limit_backend():
+    with pytest.raises(ValidationError):
+        Settings(
+            environment="production",
+            jwt_secret="a" * 64,
+            database_url="postgresql+psycopg://user:password@postgres:5432/vidora",
+            redis_url="redis://localhost:6379/0",
+            auto_create_db=False,
+            allowed_origins="https://app.example",
+        )
+
+
 def test_rate_limiter_is_bounded():
     limiter = RateLimiter()
 

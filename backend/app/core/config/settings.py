@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     refresh_token_ttl_seconds: int = Field(default=60 * 60 * 24 * 30, ge=3600, le=60 * 60 * 24 * 365)
     rate_limit_per_minute: int = Field(default=120, ge=10, le=10000)
     auth_rate_limit_per_minute: int = Field(default=60, ge=3, le=1000)
+    analyzer_rate_limit_per_minute: int = Field(default=30, ge=3, le=1000)
+    download_rate_limit_per_minute: int = Field(default=20, ge=3, le=1000)
     cors_allow_credentials: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -40,6 +42,9 @@ class Settings(BaseSettings):
                 raise ValueError("JWT_SECRET must be a strong, non-default secret in production")
             if self.database_url.lower().startswith("sqlite"):
                 raise ValueError("SQLite is only supported for isolated development/test mode; configure PostgreSQL in production")
+            redis_target = self.redis_url.lower().split("@")[-1]
+            if redis_target.startswith(("redis://localhost", "redis://127.0.0.1", "rediss://localhost", "rediss://127.0.0.1")):
+                raise ValueError("Production Redis must be a shared non-local deployment")
             if self.auto_create_db:
                 raise ValueError("AUTO_CREATE_DB must be false in production; run Alembic migrations explicitly")
             if not self.jwt_issuer.strip() or not self.jwt_audience.strip():

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db import DownloadTaskModel, get_session
 from app.schemas.downloads import DownloadStatus, DownloadTask, DownloadTaskCreate
+from app.services.download_state_machine import require_transition
 
 
 class DownloadRepository:
@@ -27,7 +28,7 @@ class DownloadRepository:
             mime_type=payload.mime_type,
             quality=payload.quality,
             status=DownloadStatus.QUEUED,
-            progress_percent=0,
+            progress_percent=None,
             progress_known=False,
             bytes_downloaded=0,
             retry_count=0,
@@ -146,6 +147,24 @@ class DownloadRepository:
         finally:
             session.close()
 
+    def transition(self, task_id: UUID, target: DownloadStatus, **values) -> DownloadTask | None:
+        session = self._session()
+        try:
+            model = session.get(DownloadTaskModel, str(task_id))
+            if model is None:
+                return None
+            current = DownloadStatus(model.status)
+            require_transition(current, target)
+            model.status = target.value
+            for key, value in values.items():
+                setattr(model, key, value)
+            model.updated_at = datetime.now(timezone.utc)
+            session.commit()
+            session.refresh(model)
+            return self._from_model(model)
+        finally:
+            session.close()
+
     def request_cancel(self, task_id: UUID, owner_id: UUID) -> DownloadTask | None:
         session = self._session()
         try:
@@ -155,10 +174,17 @@ class DownloadRepository:
             now = datetime.now(timezone.utc)
             status = DownloadStatus(model.status)
             if status == DownloadStatus.QUEUED:
-                model.status = DownloadStatus.CANCELLED.value
-                model.cancelled_at = now
+                target = DownloadStatus.CANCELLED
+                values = {"cancelled_at": now}
             elif status in {DownloadStatus.STARTING, DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED}:
-                model.status = DownloadStatus.CANCELLING.value
+                target = DownloadStatus.CANCELLING
+                values = {}
+            else:
+                return self._from_model(model)
+            require_transition(status, target)
+            model.status = target.value
+            for key, value in values.items():
+                setattr(model, key, value)
             model.updated_at = now
             session.commit()
             session.refresh(model)

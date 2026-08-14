@@ -63,20 +63,12 @@ class DownloadService:
         return updated
 
     def pause(self, task_id: UUID, owner_id: UUID) -> DownloadTask:
-        task = self.get(task_id, owner_id)
-        if task.status not in {DownloadStatus.QUEUED, DownloadStatus.STARTING, DownloadStatus.DOWNLOADING}:
-            raise HTTPException(status_code=409, detail="Download cannot be paused in its current state")
-        return self._repository.update(task.id, status=DownloadStatus.PAUSED.value) or task
+        self.get(task_id, owner_id)
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="FEATURE_NOT_AVAILABLE: pause requires an extractor with native pause support")
 
     def resume(self, task_id: UUID, owner_id: UUID) -> DownloadTask:
-        task = self.get(task_id, owner_id)
-        if task.status != DownloadStatus.PAUSED:
-            raise HTTPException(status_code=409, detail="Only paused downloads can be resumed")
-        updated = self._repository.update(task.id, status=DownloadStatus.QUEUED.value, error_code=None, error_message=None)
-        if updated is None or self._queue.enqueue(task.id, attempt=updated.retry_count) is None:
-            self._repository.update(task.id, status=DownloadStatus.FAILED.value, error_code="REDIS_UNAVAILABLE", error_message="Redis Streams unavailable; download was not resumed")
-            raise HTTPException(status_code=503, detail="Redis Streams unavailable; download was not resumed")
-        return updated
+        self.get(task_id, owner_id)
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="FEATURE_NOT_AVAILABLE: resume requires an extractor with native pause support")
 
     def retry(self, task_id: UUID, owner_id: UUID) -> DownloadTask:
         task = self.get(task_id, owner_id)

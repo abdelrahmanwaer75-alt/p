@@ -106,3 +106,18 @@ The API exposes `/health` for liveness and `/ready` for PostgreSQL/Redis readine
 | `alembic upgrade head` on isolated SQLite test database | Passed through revision `0006` |
 | `git diff --check` | Passed |
 | Docker Compose config/build | Not run: Docker unavailable |
+
+## Download lifecycle hardening update
+
+The download lifecycle now has a central transition policy and explicit service boundaries for state machine, retry policy, events, queue, and repository access. Redis Streams supports consumer groups, acknowledgement, retry enqueueing, pending recovery, dead-lettering, and event publishing. The worker preserves pending messages across uncaught crashes, retries only `TransientDownloadError` up to three times, and marks permanent or unavailable-adapter failures without endless retries.
+
+Progress events are derived from extractor callbacks. If an adapter cannot report total bytes, the event contains downloaded bytes but no fabricated percentage. Pause and resume are explicitly unavailable until native adapter support exists. Ownership and idempotency behavior remains scoped to the authenticated user.
+
+| Lifecycle validation | Result |
+|---|---:|
+| Full backend suite | **72 passed** |
+| Queue ack/retry/dead-letter/ping tests | Passed |
+| Worker crash and pending recovery tests | Passed |
+| User isolation and duplicate idempotency tests | Passed |
+| `python3 -m compileall -q backend` | Passed |
+| `git diff --check` | Passed |

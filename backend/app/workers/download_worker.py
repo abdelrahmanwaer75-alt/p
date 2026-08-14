@@ -18,11 +18,13 @@ from app.extractors.registry import registry
 from app.repositories.downloads import DownloadRepository
 from app.repositories.library import LibraryRepository
 from app.queue import DownloadQueue, QueueMessage, QueueUnavailable
+from app.services.download_retry import DownloadRetryPolicy
 from app.schemas.downloads import DownloadStatus
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("vidora.worker")
-MAX_RETRIES = 3
+RETRY_POLICY = DownloadRetryPolicy(max_retries=3)
+MAX_RETRIES = RETRY_POLICY.max_retries
 
 
 def now() -> datetime:
@@ -127,7 +129,10 @@ async def process_once(
             speed=speed,
             eta=eta,
         )
-        _publish(queue, task.id, "progress", progress_percent=percent or 0, bytes_downloaded=bytes_downloaded, total_bytes=total_bytes or 0)
+        progress_payload: dict[str, object] = {"bytes_downloaded": bytes_downloaded}
+        if total_bytes is not None:
+            progress_payload.update({"progress_percent": percent, "total_bytes": total_bytes})
+        _publish(queue, task.id, "progress", **progress_payload)
 
     try:
         repository.update(task.id, status=DownloadStatus.DOWNLOADING.value)
@@ -181,10 +186,10 @@ async def process_once(
         _publish(queue, task.id, "failed", error_code="FEATURE_NOT_AVAILABLE")
         return True
     except TransientDownloadError as exc:
-        next_retry = task.retry_count + 1
-        if next_retry <= MAX_RETRIES:
+        next_retry = RETRY_POLICY.next_attempt(task.retry_count)
+        if RETRY_POLICY.should_retry(task.retry_count):
             repository.update(task.id, status=DownloadStatus.QUEUED.value, retry_count=next_retry, error_code="TRANSIENT_RETRY", error_message=str(exc))
-            delay = min(2 ** (next_retry - 1), 30)
+            delay = RETRY_POLICY.delay(next_retry)
             if sleep is not None:
                 result = sleep(delay)
                 if asyncio.iscoroutine(result):
@@ -194,9 +199,11 @@ async def process_once(
                 _error_task(repository, task.id, "REDIS_UNAVAILABLE", "Redis Streams unavailable while scheduling retry")
                 return True
             _ack(queue, message.message_id)
+            _publish(queue, task.id, "queued", retry_count=next_retry)
             return True
         _error_task(repository, task.id, "RETRY_EXHAUSTED", str(exc))
         _dead_letter(queue, message, reason=str(exc), attempt=next_retry)
+        _publish(queue, task.id, "failed", error_code="RETRY_EXHAUSTED")
         return True
     except Exception as exc:
         logger.exception("Permanent download failure for task %s", task.id)

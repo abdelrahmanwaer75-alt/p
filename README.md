@@ -120,3 +120,11 @@ Production uses PostgreSQL as the shared source of truth for the API and worker.
 Media files use the `MediaStorage` boundary and the configured `DOWNLOAD_DIRECTORY`. The production Compose deployment mounts the same named `media_data` volume into both API and worker at `/app/data/media`, alongside persistent PostgreSQL and Redis volumes. The application keeps a read-only container root while the media volume and `/tmp` remain writable where needed.
 
 `/health` is a liveness endpoint. `/ready` verifies both PostgreSQL and Redis and returns HTTP 503 when either dependency is unavailable. The worker writes a readiness marker only after it can reach both PostgreSQL and Redis; its container healthcheck validates the marker freshness rather than merely checking that Python started.
+
+## Download lifecycle hardening
+
+Download processing now has an explicit state machine for queued, starting, downloading, completed, cancelling, cancelled, failed, and retry-to-queued paths. Redis Streams remains the reliability boundary with consumer groups, acknowledgement, pending-message recovery through `XAUTOCLAIM`, transient retry scheduling, dead-letter handling, and lifecycle event publishing.
+
+The worker only reports progress received from an extractor callback. When an adapter does not provide a total size, it emits bytes downloaded without inventing a percentage. Unavailable adapters fail with `FEATURE_NOT_AVAILABLE`; no download or progress is simulated. Pause and resume return `FEATURE_NOT_AVAILABLE` until an extractor exposes native pause support rather than pretending that a state-only toggle pauses I/O.
+
+Idempotency remains scoped to the authenticated owner and `Idempotency-Key`, cancellation is ownership-scoped, and failed transient processing is capped at three retries with bounded exponential backoff. A worker crash leaves the Redis message pending for recovery instead of acknowledging it prematurely.

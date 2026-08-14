@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from datetime import datetime
+from pathlib import Path
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, String, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
@@ -152,6 +153,9 @@ def _engine_url() -> str:
 
 
 _resolved_engine_url = _engine_url()
+if _resolved_engine_url.startswith("sqlite:///") and ":memory:" not in _resolved_engine_url:
+    sqlite_path = _resolved_engine_url.removeprefix("sqlite:///")
+    Path(sqlite_path).expanduser().parent.mkdir(parents=True, exist_ok=True)
 connect_args = {"check_same_thread": False} if _resolved_engine_url.startswith("sqlite") else {}
 _engine_options = {"future": True, "pool_pre_ping": True, "connect_args": connect_args}
 if not _resolved_engine_url.startswith("sqlite"):
@@ -163,6 +167,8 @@ if not _resolved_engine_url.startswith("sqlite"):
         pool_recycle=_settings.db_pool_recycle_seconds,
     )
 engine = create_engine(_resolved_engine_url, **_engine_options)
+if _resolved_engine_url.startswith("sqlite"):
+    Base.metadata.create_all(bind=engine)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
 

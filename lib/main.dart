@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core_api.dart';
+import 'library_page.dart';
 
 void main() => runApp(const VidoraApp());
 
@@ -231,15 +232,19 @@ class _ShellState extends State<Shell> {
         title: widget.copy.emptyDownloads,
         body: widget.copy.emptyDownloadsBody,
       ),
-      EmptyPage(
+      LibraryPage(
+        api: widget.api,
+        mode: 'library',
         icon: Icons.folder_rounded,
-        title: widget.copy.emptyFiles,
-        body: widget.copy.emptyFilesBody,
+        title: widget.copy.files,
+        emptyBody: widget.copy.emptyFilesBody,
       ),
-      EmptyPage(
+      LibraryPage(
+        api: widget.api,
+        mode: 'favorites',
         icon: Icons.favorite_rounded,
-        title: widget.copy.emptyFavorites,
-        body: widget.copy.emptyFavoritesBody,
+        title: widget.copy.favorites,
+        emptyBody: widget.copy.emptyFavoritesBody,
       ),
       SettingsPage(
         copy: widget.copy,

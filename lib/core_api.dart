@@ -60,6 +60,35 @@ class SessionStore {
   }
 }
 
+class LibraryItem {
+  final String id;
+  final String title;
+  final String sourceUrl;
+  final String mediaType;
+  final bool isFavorite;
+  final DateTime? viewedAt;
+
+  const LibraryItem({
+    required this.id,
+    required this.title,
+    required this.sourceUrl,
+    required this.mediaType,
+    required this.isFavorite,
+    required this.viewedAt,
+  });
+
+  factory LibraryItem.fromJson(Map<String, dynamic> json) => LibraryItem(
+    id: json['id'] as String? ?? '',
+    title: json['title'] as String? ?? 'Untitled',
+    sourceUrl: json['source_url'] as String? ?? '',
+    mediaType: json['media_type'] as String? ?? 'video',
+    isFavorite: json['is_favorite'] as bool? ?? false,
+    viewedAt: json['viewed_at'] == null
+        ? null
+        : DateTime.tryParse(json['viewed_at'] as String),
+  );
+}
+
 class VidoraApiClient {
   final Dio _dio;
   final SessionStore sessionStore;
@@ -98,6 +127,24 @@ class VidoraApiClient {
     );
     return login(email, password);
   }
+
+  Map<String, String> get _authHeaders =>
+      _token == null ? const {} : {'Authorization': 'Bearer $_token'};
+
+  Future<List<LibraryItem>> _getLibrary(String path) async {
+    final response = await _dio.get<List<dynamic>>(
+      path,
+      options: Options(headers: _authHeaders),
+    );
+    return (response.data ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(LibraryItem.fromJson)
+        .toList();
+  }
+
+  Future<List<LibraryItem>> library() => _getLibrary('/api/v1/library');
+  Future<List<LibraryItem>> favorites() => _getLibrary('/api/v1/favorites');
+  Future<List<LibraryItem>> history() => _getLibrary('/api/v1/history');
 
   Future<AnalyzerPreview> previewUrl(String url) async {
     final response = await _dio.post<Map<String, dynamic>>(

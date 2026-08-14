@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 from fastapi import HTTPException, status
 
+from app.extractors.registry import registry
 from app.schemas.analyzer import AnalyzerResult, MediaKind, Platform
 
 
@@ -50,10 +51,10 @@ def detect_platform(raw_url: str) -> Platform:
 def build_preview(raw_url: str) -> AnalyzerResult:
     validate_public_url(raw_url)
     platform = detect_platform(raw_url)
-    supported = platform != Platform.GENERIC
+    supported = platform in registry.supported_platforms()
     message = (
-        "Platform detected. Metadata extraction is gated until an authorized extractor is configured."
+        "Platform detected and an authorized extractor is configured."
         if supported
-        else "Generic URL accepted. No platform extractor is configured for this source."
+        else "Platform detected, but no platform-approved extractor is configured yet."
     )
     return AnalyzerResult(url=raw_url, platform=platform, content_kind=MediaKind.UNKNOWN, supported=supported, message=message)

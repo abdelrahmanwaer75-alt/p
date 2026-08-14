@@ -25,7 +25,8 @@ def test_analyzer_preview_detects_platform_without_fetching() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["platform"] == "youtube"
-    assert body["supported"] is True
+    assert body["supported"] is False
+    assert "configured yet" in body["message"]
     assert body["formats"] == []
 
 

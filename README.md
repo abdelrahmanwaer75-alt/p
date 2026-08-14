@@ -40,3 +40,7 @@ The current foundation is intentionally small and easy to extend. The primary UI
 ## Legal boundary
 
 Vidora must only process media that the user is authorized to download and that the source platform permits downloading. DRM circumvention, paywall bypass, authentication bypass, CAPTCHA bypass, anti-bot bypass, private-content extraction without authorization, and arbitrary shell execution are outside the product and must remain excluded.
+
+## Phase 4 download engine foundation
+
+The backend now exposes a queue-oriented download task contract under `/api/v1/downloads`. Tasks require an explicit authorization confirmation, start in `queued` state, and report `progress_percent: null` with `progress_known: false` until a real worker can provide measured progress. The worker boundary deliberately refuses to execute until an authorized, policy-aware adapter is configured. No raw shell command, subprocess, DRM circumvention, CAPTCHA bypass, or fabricated progress is present.

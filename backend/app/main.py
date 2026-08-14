@@ -6,9 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
+from uuid import UUID
+
 from app.schemas.analyzer import AnalyzerResult
 from app.schemas.common import AnalyzeRequest, HealthResponse, VersionResponse, utc_now
+from app.schemas.downloads import DownloadTask, DownloadTaskAccepted, DownloadTaskCreate
 from app.services.analyzer import build_preview
+from app.services.downloads import get_download_service
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -54,6 +58,27 @@ async def version() -> VersionResponse:
 async def analyzer_preview(payload: AnalyzeRequest) -> AnalyzerResult:
     """Validate a public URL and identify its platform without fetching content."""
     return build_preview(str(payload.url))
+
+
+@api.post("/downloads", response_model=DownloadTaskAccepted, status_code=202, tags=["downloads"])
+async def create_download(payload: DownloadTaskCreate) -> DownloadTaskAccepted:
+    task = get_download_service().create(payload)
+    return DownloadTaskAccepted(task=task, message="Download queued. No worker adapter is enabled in this phase.")
+
+
+@api.get("/downloads", response_model=list[DownloadTask], tags=["downloads"])
+async def list_downloads() -> list[DownloadTask]:
+    return get_download_service().list()
+
+
+@api.get("/downloads/{task_id}", response_model=DownloadTask, tags=["downloads"])
+async def get_download(task_id: UUID) -> DownloadTask:
+    return get_download_service().get(task_id)
+
+
+@api.post("/downloads/{task_id}/run", response_model=DownloadTask, tags=["downloads"])
+async def run_download(task_id: UUID) -> DownloadTask:
+    return await get_download_service().run(task_id)
 
 
 app.include_router(api)

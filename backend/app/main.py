@@ -1,7 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, Depends, FastAPI, Request
+from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -9,9 +10,11 @@ from app.core.config import get_settings
 from uuid import UUID
 
 from app.schemas.analyzer import AnalyzerResult
+from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from app.schemas.common import AnalyzeRequest, HealthResponse, VersionResponse, utc_now
 from app.schemas.downloads import DownloadTask, DownloadTaskAccepted, DownloadTaskCreate
 from app.services.analyzer import build_preview
+from app.services.auth import bearer, current_user, login, register
 from app.services.downloads import get_download_service
 
 settings = get_settings()
@@ -52,6 +55,21 @@ async def health() -> HealthResponse:
 @api.get("/version", response_model=VersionResponse, tags=["system"])
 async def version() -> VersionResponse:
     return VersionResponse(name=settings.app_name, version=app.version, api_prefix=settings.api_prefix)
+
+
+@api.post("/auth/register", response_model=UserResponse, status_code=201, tags=["auth"])
+async def register_account(payload: RegisterRequest) -> UserResponse:
+    return register(payload)
+
+
+@api.post("/auth/login", response_model=TokenResponse, tags=["auth"])
+async def login_account(payload: LoginRequest) -> TokenResponse:
+    return login(payload)
+
+
+@api.get("/auth/me", response_model=UserResponse, tags=["auth"])
+async def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> UserResponse:
+    return current_user(credentials)
 
 
 @api.post("/analyzer/preview", response_model=AnalyzerResult, tags=["analyzer"])

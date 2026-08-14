@@ -61,3 +61,17 @@ The actual media downloader remains intentionally disabled until each allowliste
 Vidora must not be described as fully production-ready until the following blockers are closed: an approved real downloader implementation, live PostgreSQL and Redis integration validation, successful Docker build/start validation, Flutter analyze/test and device validation, CI/CD coverage, and external security testing. These limitations are explicit and the application must continue to report unavailable functionality honestly.
 
 Last reviewed: 2026-08-14
+
+## Flutter refactor QA update
+
+The Flutter root was reorganized without rebuilding the application. `main.dart` now only initializes Flutter/media dependencies and calls `runApp`. `app.dart` owns `MaterialApp.router`, theme mode, locale, and global background-event handling. Navigation now lives under `lib/navigation`, configuration under `lib/config`, shared theme/API boundaries under `lib/core`, and controllers were moved beside analyzer, downloads, files, library, and settings features. The existing `features/providers.dart` file is a compatibility barrel only.
+
+| Flutter check | Result |
+|---|---:|
+| `flutter pub get` | Passed |
+| `dart format lib test` | Passed |
+| `flutter analyze` | **No issues found** |
+| Full `flutter test` | **All tests passed** |
+| `libmpv` dependency for media_kit tests | Installed in QA sandbox |
+
+The widget test was made deterministic by providing a test API client and test router; it still verifies onboarding and navigation to login. The full test suite includes player state validation. Physical Android/iOS builds, permissions, notifications, background execution, and real device playback remain deployment-environment checks.

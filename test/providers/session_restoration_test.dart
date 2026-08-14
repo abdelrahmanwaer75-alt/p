@@ -13,10 +13,18 @@ class FakeApiClient extends ApiClient {
   @override
   Future<AuthSession> restoreSession() async {
     if (restoreError != null) throw restoreError!;
-    return AuthSession(user: const User(id: 'user-1', email: 'user@example.com'), accessToken: 'access', refreshToken: 'refresh', expiresIn: 900);
+    return AuthSession(
+      user: const User(id: 'user-1', email: 'user@example.com'),
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      expiresIn: 900,
+    );
   }
+
   @override
-  Future<void> clearSession() async { cleared = true; }
+  Future<void> clearSession() async {
+    cleared = true;
+  }
 }
 
 void main() {
@@ -29,16 +37,24 @@ void main() {
     controller.dispose();
   });
 
-  test('expired session clears secure storage and becomes unauthenticated', () async {
-    final api = FakeApiClient(restoreError: const ApiFailure(FailureKind.unauthorized, 'expired'));
-    final controller = AuthController(api);
-    await controller.restore();
-    expect(controller.state.status, AuthStatus.unauthenticated);
-    expect(api.cleared, isTrue);
-    controller.dispose();
-  });
+  test(
+    'expired session clears secure storage and becomes unauthenticated',
+    () async {
+      final api = FakeApiClient(
+        restoreError: const ApiFailure(FailureKind.unauthorized, 'expired'),
+      );
+      final controller = AuthController(api);
+      await controller.restore();
+      expect(controller.state.status, AuthStatus.unauthenticated);
+      expect(api.cleared, isTrue);
+      controller.dispose();
+    },
+  );
 
-  test('API URL is configured through API_BASE_URL with no 127.0.0.1 default', () {
-    expect(AppConfig.apiBaseUrl, isNot(contains('127.0.0.1')));
-  });
+  test(
+    'API URL is configured through API_BASE_URL with no 127.0.0.1 default',
+    () {
+      expect(AppConfig.apiBaseUrl, isNot(contains('127.0.0.1')));
+    },
+  );
 }

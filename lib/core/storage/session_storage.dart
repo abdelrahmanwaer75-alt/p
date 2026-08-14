@@ -1,14 +1,18 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SessionStorage {
-  const SessionStorage({FlutterSecureStorage storage = const FlutterSecureStorage()}) : _storage = storage;
+  const SessionStorage({this._storage = const FlutterSecureStorage()});
 
   static const accessTokenKey = 'vidora_access_token';
   static const refreshTokenKey = 'vidora_refresh_token';
   static const emailKey = 'vidora_account_email';
   final FlutterSecureStorage _storage;
 
-  Future<void> save({required String accessToken, required String refreshToken, required String email}) async {
+  Future<void> save({
+    required String accessToken,
+    required String refreshToken,
+    required String email,
+  }) async {
     await _storage.write(key: accessTokenKey, value: accessToken);
     await _storage.write(key: refreshTokenKey, value: refreshToken);
     await _storage.write(key: emailKey, value: email);

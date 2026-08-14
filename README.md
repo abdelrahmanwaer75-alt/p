@@ -85,3 +85,22 @@ Further implementation and QA details are documented in `AUDIT.md`, `SECURITY.md
 ## Legal and safety boundary
 
 Vidora must only process media the user is authorized to download and the source platform permits downloading. DRM circumvention, paywall bypass, authentication bypass, CAPTCHA bypass, anti-bot bypass, private-content extraction without authorization, and arbitrary shell execution are excluded by design.
+
+## Flutter architecture
+
+The Flutter application is organized around a small `lib/main.dart`, `lib/app.dart` for the MaterialApp/router root, `config` and `navigation` boundaries, a core API/config/theme layer, and feature-owned controllers. Analyzer, downloads, files, library collections, settings, playlists, player, and authentication logic remain in their respective feature directories. `features/providers.dart` is retained only as a compatibility export barrel; it no longer contains the controller implementations.
+
+The widget layer consumes Riverpod state and does not call Dio, WebSocket, or native method channels directly. API and background service implementations remain behind core/network and core/downloads boundaries.
+
+## Latest Flutter verification
+
+With the local Flutter SDK and `libmpv` available, the following checks passed:
+
+```bash
+flutter pub get
+dart format lib test
+flutter analyze
+flutter test
+```
+
+The complete Flutter test suite passed. Android/iOS device builds and runtime background execution still require their platform SDKs, simulators/devices, and signing environments.

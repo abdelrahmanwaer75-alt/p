@@ -11,28 +11,56 @@ final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
 enum AuthStatus { restoring, unauthenticated, authenticated, error }
 
 class AuthState {
-  const AuthState({this.status = AuthStatus.restoring, this.session, this.message});
+  const AuthState({
+    this.status = AuthStatus.restoring,
+    this.session,
+    this.message,
+  });
   final AuthStatus status;
   final AuthSession? session;
   final String? message;
-  AuthState copyWith({AuthStatus? status, AuthSession? session, String? message}) => AuthState(status: status ?? this.status, session: session ?? this.session, message: message ?? this.message);
+  AuthState copyWith({
+    AuthStatus? status,
+    AuthSession? session,
+    String? message,
+  }) => AuthState(
+    status: status ?? this.status,
+    session: session ?? this.session,
+    message: message ?? this.message,
+  );
 }
 
-final authProvider = StateNotifierProvider<AuthController, AuthState>((ref) => AuthController(ref.read(apiClientProvider)));
+final authProvider = StateNotifierProvider<AuthController, AuthState>((ref) {
+  final controller = AuthController(
+    ref.read(apiClientProvider),
+    autoRestore: false,
+  );
+  Future<void>.microtask(controller.restore);
+  return controller;
+});
 
 class AuthController extends StateNotifier<AuthState> {
-  AuthController(this._api) : super(const AuthState()) {
-    unawaited(restore());
+  AuthController(this._api, {bool autoRestore = true})
+    : super(const AuthState()) {
+    if (autoRestore) unawaited(restore());
   }
   final ApiClient _api;
 
   Future<void> restore() async {
     state = state.copyWith(status: AuthStatus.restoring, message: null);
     try {
-      state = state.copyWith(status: AuthStatus.authenticated, session: await _api.restoreSession());
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        session: await _api.restoreSession(),
+      );
     } on ApiFailure catch (failure) {
       await _api.clearSession();
-      state = AuthState(status: failure.kind == FailureKind.unauthorized ? AuthStatus.unauthenticated : AuthStatus.error, message: failure.message);
+      state = AuthState(
+        status: failure.kind == FailureKind.unauthorized
+            ? AuthStatus.unauthenticated
+            : AuthStatus.error,
+        message: failure.message,
+      );
     } catch (error) {
       await _api.clearSession();
       state = AuthState(status: AuthStatus.error, message: error.toString());
@@ -42,16 +70,27 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> login(String email, String password) async {
     state = state.copyWith(status: AuthStatus.restoring, message: null);
     try {
-      state = state.copyWith(status: AuthStatus.authenticated, session: await _api.login(email, password));
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        session: await _api.login(email, password),
+      );
     } on ApiFailure catch (failure) {
-      state = AuthState(status: failure.kind == FailureKind.unauthorized ? AuthStatus.unauthenticated : AuthStatus.error, message: failure.message);
+      state = AuthState(
+        status: failure.kind == FailureKind.unauthorized
+            ? AuthStatus.unauthenticated
+            : AuthStatus.error,
+        message: failure.message,
+      );
     }
   }
 
   Future<void> register(String email, String password) async {
     state = state.copyWith(status: AuthStatus.restoring, message: null);
     try {
-      state = state.copyWith(status: AuthStatus.authenticated, session: await _api.register(email, password));
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        session: await _api.register(email, password),
+      );
     } on ApiFailure catch (failure) {
       state = AuthState(status: AuthStatus.error, message: failure.message);
     }
@@ -63,7 +102,9 @@ class AuthController extends StateNotifier<AuthState> {
   }
 }
 
-final sessionProvider = Provider<AuthSession?>((ref) => ref.watch(authProvider).session);
+final sessionProvider = Provider<AuthSession?>(
+  (ref) => ref.watch(authProvider).session,
+);
 
 ResourceStatus statusForFailure(ApiFailure failure) => switch (failure.kind) {
   FailureKind.unauthorized => ResourceStatus.unauthorized,

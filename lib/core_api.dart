@@ -172,6 +172,24 @@ class VidoraApiClient {
         .toList();
   }
 
+  Future<DownloadTask> createDownload(
+    String url,
+    String formatId, {
+    required bool authorized,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/downloads',
+      data: {
+        'source_url': url,
+        'format_id': formatId,
+        'authorized': authorized,
+      },
+      options: Options(headers: _authHeaders),
+    );
+    final task = (response.data?['task'] as Map<String, dynamic>?) ?? const {};
+    return DownloadTask.fromJson(task);
+  }
+
   Future<List<DownloadTask>> downloads() async {
     final response = await _dio.get<List<dynamic>>(
       '/api/v1/downloads',

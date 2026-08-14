@@ -63,6 +63,11 @@ class AppCopy {
   String get comingSoon => ar ? 'قريبًا' : 'Coming soon';
   String get authorizedOnly =>
       ar ? 'للمحتوى المصرّح به فقط' : 'Authorized content only';
+  String get format => ar ? 'الصيغة' : 'Format';
+  String get download => ar ? 'تنزيل' : 'Download';
+  String get authorizationConfirm => ar
+      ? 'أؤكد أن لدي صلاحية تنزيل هذا المحتوى'
+      : 'I confirm I am authorized to download this content';
 }
 
 class VidoraApp extends StatefulWidget {
@@ -293,6 +298,8 @@ class HomePage extends StatelessWidget {
   Future<void> _analyze(BuildContext context) async {
     final controller = TextEditingController();
     var loading = false;
+    var authorized = false;
+    var format = 'mp4';
     String? result;
     await showDialog<void>(
       context: context,
@@ -308,6 +315,29 @@ class HomePage extends StatelessWidget {
                 decoration: const InputDecoration(
                   hintText: 'https://example.com/video',
                 ),
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: format,
+                decoration: InputDecoration(labelText: copy.format),
+                items: const [
+                  DropdownMenuItem(value: 'mp4', child: Text('MP4')),
+                  DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                  DropdownMenuItem(value: 'webm', child: Text('WebM')),
+                ],
+                onChanged: loading
+                    ? null
+                    : (value) {
+                        if (value != null) setDialogState(() => format = value);
+                      },
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: authorized,
+                onChanged: loading
+                    ? null
+                    : (value) =>
+                          setDialogState(() => authorized = value ?? false),
+                title: Text(copy.authorizationConfirm),
               ),
               if (result != null)
                 Padding(
@@ -334,9 +364,21 @@ class HomePage extends StatelessWidget {
                         final preview = await api.previewUrl(
                           controller.text.trim(),
                         );
+                        if (!preview.supported) {
+                          setDialogState(() {
+                            loading = false;
+                            result = preview.message;
+                          });
+                          return;
+                        }
+                        await api.createDownload(
+                          controller.text.trim(),
+                          format,
+                          authorized: authorized,
+                        );
                         setDialogState(() {
                           loading = false;
-                          result = '${preview.platform}: ${preview.message}';
+                          result = copy.download;
                         });
                       } catch (_) {
                         setDialogState(() {

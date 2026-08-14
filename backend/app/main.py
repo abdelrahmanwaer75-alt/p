@@ -6,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
-from app.schemas.common import AnalyzeRequest, AnalyzeResponse, HealthResponse, VersionResponse, utc_now
+from app.schemas.analyzer import AnalyzerResult
+from app.schemas.common import AnalyzeRequest, HealthResponse, VersionResponse, utc_now
+from app.services.analyzer import build_preview
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -48,18 +50,10 @@ async def version() -> VersionResponse:
     return VersionResponse(name=settings.app_name, version=app.version, api_prefix=settings.api_prefix)
 
 
-@api.post("/analyzer/preview", response_model=AnalyzeResponse, status_code=202, tags=["analyzer"])
-async def analyzer_preview(payload: AnalyzeRequest) -> AnalyzeResponse:
-    """Validate a URL without fetching it.
-
-    Actual platform extraction belongs to a later phase and must be implemented
-    behind a dedicated, policy-aware service abstraction.
-    """
-    return AnalyzeResponse(
-        status="accepted",
-        message="URL validated. Platform analysis service is not enabled in this phase.",
-        url=payload.url,
-    )
+@api.post("/analyzer/preview", response_model=AnalyzerResult, tags=["analyzer"])
+async def analyzer_preview(payload: AnalyzeRequest) -> AnalyzerResult:
+    """Validate a public URL and identify its platform without fetching content."""
+    return build_preview(str(payload.url))
 
 
 app.include_router(api)

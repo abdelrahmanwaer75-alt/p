@@ -20,10 +20,18 @@ def test_version() -> None:
     assert response.json()["api_prefix"] == "/api/v1"
 
 
-def test_analyzer_preview_validates_http_url_without_fetching() -> None:
-    response = client.post("/api/v1/analyzer/preview", json={"url": "https://example.com/video"})
-    assert response.status_code == 202
-    assert response.json()["status"] == "accepted"
+def test_analyzer_preview_detects_platform_without_fetching() -> None:
+    response = client.post("/api/v1/analyzer/preview", json={"url": "https://www.youtube.com/watch?v=abc"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["platform"] == "youtube"
+    assert body["supported"] is True
+    assert body["formats"] == []
+
+
+def test_analyzer_preview_rejects_private_network_url() -> None:
+    response = client.post("/api/v1/analyzer/preview", json={"url": "http://127.0.0.1:8000/health"})
+    assert response.status_code == 422
 
 
 def test_analyzer_preview_rejects_non_http_url() -> None:

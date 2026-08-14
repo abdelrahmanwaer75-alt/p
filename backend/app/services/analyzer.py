@@ -108,6 +108,7 @@ def _generic_result(raw_url: str) -> AnalyzerResult:
         audio_formats=[],
         video_formats=[],
         restrictions=["unsupported_platform"],
+        limitations=["platform_not_allowed", "metadata_unavailable", "formats_unavailable"],
         message="The URL is valid, but its platform is outside Vidora's approved platform allowlist.",
     )
 

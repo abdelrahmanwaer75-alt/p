@@ -28,6 +28,8 @@ class MediaFormat(BaseModel):
     quality: Optional[str] = None
     mime_type: Optional[str] = None
     estimated_size_bytes: Optional[int] = Field(default=None, ge=0)
+    bitrate: Optional[int] = Field(default=None, ge=0)
+    fps: Optional[float] = Field(default=None, ge=0)
 
 
 class AnalyzerResult(BaseModel):
@@ -46,7 +48,11 @@ class AnalyzerResult(BaseModel):
     mime_type: Optional[str] = None
     extension: Optional[str] = None
     quality: Optional[str] = None
+    bitrate: Optional[int] = Field(default=None, ge=0)
+    resolution: Optional[str] = None
+    fps: Optional[float] = Field(default=None, ge=0)
     restrictions: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
     message: str
 
     # Backward-compatible fields retained for existing Flutter/API consumers.

@@ -44,7 +44,11 @@ class ExtractorMetadata:
     mime_type: str | None = None
     extension: str | None = None
     quality: str | None = None
+    bitrate: int | None = None
+    resolution: str | None = None
+    fps: float | None = None
     estimated_size: int | None = None
+    limitations: tuple[str, ...] = ()
 
 
 class PlatformExtractor(ABC):
@@ -55,8 +59,11 @@ class PlatformExtractor(ABC):
         if not self.available:
             return self.unavailable_result(url)
         self.validate_authorization(authorized)
-        metadata = await self.get_metadata(url)
-        formats = await self.get_formats(url)
+        try:
+            metadata = await self.get_metadata(url)
+            formats = await self.get_formats(url)
+        except ExtractorUnavailable:
+            return self.unavailable_result(url)
         return self.build_result(url, metadata, formats)
 
     def validate_authorization(self, authorized: bool) -> None:
@@ -89,9 +96,11 @@ class PlatformExtractor(ABC):
             audio_formats=[],
             video_formats=[],
             restrictions=["adapter_unavailable"],
+            limitations=("metadata_unavailable", "formats_unavailable", "download_unavailable"),
             message=(
+                "FEATURE_NOT_AVAILABLE: "
                 f"{self.platform.value.title()} is recognized, but no platform-approved extractor is configured yet. "
-                "No metadata or formats were fetched or fabricated."
+                "No metadata, formats, size, duration, progress, or download URL were fetched or fabricated."
             ),
         )
 
@@ -115,6 +124,10 @@ class PlatformExtractor(ABC):
             mime_type=metadata.mime_type,
             extension=metadata.extension,
             quality=metadata.quality,
+            bitrate=metadata.bitrate,
+            resolution=metadata.resolution,
+            fps=metadata.fps,
+            limitations=list(metadata.limitations),
             content_kind=content_kind,
             creator=metadata.uploader,
             duration_seconds=metadata.duration,

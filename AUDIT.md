@@ -121,3 +121,19 @@ Progress events are derived from extractor callbacks. If an adapter cannot repor
 | User isolation and duplicate idempotency tests | Passed |
 | `python3 -m compileall -q backend` | Passed |
 | `git diff --check` | Passed |
+
+## Media analyzer hardening update
+
+The analyzer now exposes the requested verified fields for metadata and formats, including bitrate, resolution, fps, restrictions, and limitations. All five approved platforms have isolated extractor packages. The registry does not include YouTube, Instagram, Facebook, TikTok, or X/Twitter.
+
+Unavailable adapters return `supported=false`, `FEATURE_NOT_AVAILABLE`, empty formats, null metadata, and explicit limitations. The analyzer service preserves both API aliases and both endpoints delegate to the same service. SSRF validation continues to reject invalid schemes, credentials, local/private/reserved/metadata addresses, and unsafe DNS answers; the resolution contract documents reuse of validated addresses to prevent rebinding.
+
+| Analyzer validation | Result |
+|---|---:|
+| Approved platform detection | Passed for Reddit, Vimeo, Dailymotion, SoundCloud, Twitch |
+| Prohibited platform detection | Passed for YouTube, Instagram, Facebook, TikTok, X/Twitter |
+| SSRF and DNS rebinding tests | Passed |
+| Truthful unavailable adapter result | Passed |
+| Full backend suite | **75 passed** |
+| `python3 -m compileall -q backend` | Passed |
+| `git diff --check` | Passed |

@@ -128,3 +128,11 @@ Download processing now has an explicit state machine for queued, starting, down
 The worker only reports progress received from an extractor callback. When an adapter does not provide a total size, it emits bytes downloaded without inventing a percentage. Unavailable adapters fail with `FEATURE_NOT_AVAILABLE`; no download or progress is simulated. Pause and resume return `FEATURE_NOT_AVAILABLE` until an extractor exposes native pause support rather than pretending that a state-only toggle pauses I/O.
 
 Idempotency remains scoped to the authenticated owner and `Idempotency-Key`, cancellation is ownership-scoped, and failed transient processing is capped at three retries with bounded exponential backoff. A worker crash leaves the Redis message pending for recovery instead of acknowledging it prematurely.
+
+## Media analyzer architecture
+
+The analyzer uses isolated platform packages under `backend/app/extractors/reddit`, `vimeo`, `dailymotion`, `soundcloud`, and `twitch`. The registry allowlist contains only those five platforms; prohibited services such as YouTube, Instagram, Facebook, TikTok, and X/Twitter resolve to an unsupported generic result.
+
+Analyzer results expose verified metadata and format fields including bitrate, resolution, fps, size, duration, MIME type, extension, quality, restrictions, and limitations. Unconfigured adapters return `supported=false`, `FEATURE_NOT_AVAILABLE`, empty format lists, and null metadata. The system never fabricates metadata, formats, sizes, durations, progress, or download URLs.
+
+Both `/api/v1/analyze` and `/api/v1/analyzer/preview` delegate to the same analyzer service. Public URL validation rejects invalid schemes, embedded credentials, localhost, private/loopback/reserved/link-local/metadata addresses, and unsafe DNS answers. Adapter implementations must reuse the validated resolution result to prevent DNS rebinding between validation and outbound access.

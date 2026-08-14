@@ -9,15 +9,14 @@ from app.extractors.vimeo import VimeoExtractor
 from app.schemas.analyzer import Platform
 
 
-ALLOWED_PLATFORMS = frozenset(
-    {
-        Platform.REDDIT,
-        Platform.VIMEO,
-        Platform.DAILYMOTION,
-        Platform.SOUNDCLOUD,
-        Platform.TWITCH,
-    }
+SUPPORTED_PLATFORMS = (
+    Platform.REDDIT,
+    Platform.VIMEO,
+    Platform.DAILYMOTION,
+    Platform.SOUNDCLOUD,
+    Platform.TWITCH,
 )
+ALLOWED_PLATFORMS = frozenset(SUPPORTED_PLATFORMS)
 
 
 @dataclass(frozen=True)
@@ -49,7 +48,7 @@ class ExtractorRegistry:
         return platform in ALLOWED_PLATFORMS
 
     def supported_platforms(self) -> list[Platform]:
-        return [platform for platform in ALLOWED_PLATFORMS if self._extractors[platform].available]
+        return [platform for platform in SUPPORTED_PLATFORMS if self._extractors[platform].available]
 
     def allowed_platforms(self) -> frozenset[Platform]:
         return ALLOWED_PLATFORMS

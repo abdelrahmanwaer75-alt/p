@@ -31,6 +31,9 @@ def test_allowed_platforms_are_detected_but_unavailable_adapters_are_truthful(ur
     assert body["formats"] == []
     assert body["audio_formats"] == []
     assert body["video_formats"] == []
+    assert body["bitrate"] is None
+    assert body["resolution"] is None
+    assert body["fps"] is None
     assert body["title"] is None
     assert "configured yet" in body["message"]
     assert "fabricated" in body["message"]
@@ -44,6 +47,7 @@ def test_allowed_platforms_are_detected_but_unavailable_adapters_are_truthful(ur
         "https://www.facebook.com/video/abc",
         "https://www.tiktok.com/@user/video/123",
         "https://x.com/user/status/123",
+        "https://twitter.com/user/status/123",
     ],
 )
 def test_prohibited_platforms_are_not_registered(url: str) -> None:
@@ -69,6 +73,8 @@ def test_invalid_scheme_is_rejected() -> None:
         "http://10.0.0.1/resource",
         "http://169.254.169.254/latest/meta-data/",
         "http://metadata.google.internal/computeMetadata/v1/",
+        "http://[::1]/health",
+        "https://user:password@vimeo.com/123456",
     ],
 )
 def test_local_private_and_metadata_endpoints_are_rejected(url: str) -> None:
@@ -95,7 +101,9 @@ def test_missing_adapter_does_not_fabricate_formats() -> None:
     assert result.audio_formats == []
     assert result.video_formats == []
     assert result.title is None
+    assert "FEATURE_NOT_AVAILABLE" in result.message
     assert "No metadata" in result.message
+    assert "metadata_unavailable" in result.limitations
 
 
 def test_adapter_authorization_gate_is_explicit() -> None:

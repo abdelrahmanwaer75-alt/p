@@ -40,7 +40,11 @@ The API should be deployed behind TLS termination and a trusted reverse proxy. C
 
 ## Verification
 
-The backend test suite currently passes with **63 tests** after the security middleware compatibility update. Compilation checks also pass. One existing dependency warning remains: Starlette reports that the installed `httpx` integration is deprecated and should be reviewed during dependency maintenance.
+The backend test suite currently passes with **75 tests** after the security and analyzer hardening updates. Python compilation checks also pass. One existing dependency warning remains: Starlette reports that the installed `httpx` integration is deprecated and should be reviewed during dependency maintenance. Ruff and mypy were not available in the sandbox and are enforced by CI instead.
+
+## Mobile release security
+
+Android release signing must use a deployment-injected production keystore. Debug signing is intentionally not configured for release artifacts. Android/iOS builds, signing, notification rendering, and OS background scheduling require platform SDKs, devices, certificates, and deployment credentials; they are not claimed as sandbox-verified.
 
 ## Reporting
 

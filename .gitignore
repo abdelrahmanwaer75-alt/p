@@ -49,3 +49,14 @@ app.*.map.json
 
 # Local Vidora backend runtime data
 /backend/data/*.db
+
+# Local QA and tool output
+.qa/
+
+# Local secrets and deployment overrides
+.env
+.env.*
+!.env.example
+keystore.properties
+*.jks
+*.keystore

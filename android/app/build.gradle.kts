@@ -19,7 +19,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Stable application ID for the Vidora Android application.
         applicationId = "com.vidora.vidora"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -35,9 +35,9 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Release signing must be supplied by the deployment environment. The
+            // project intentionally refuses to ship an APK signed with debug keys.
+            signingConfig = null
         }
     }
 }

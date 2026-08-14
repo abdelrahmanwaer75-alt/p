@@ -136,3 +136,17 @@ The analyzer uses isolated platform packages under `backend/app/extractors/reddi
 Analyzer results expose verified metadata and format fields including bitrate, resolution, fps, size, duration, MIME type, extension, quality, restrictions, and limitations. Unconfigured adapters return `supported=false`, `FEATURE_NOT_AVAILABLE`, empty format lists, and null metadata. The system never fabricates metadata, formats, sizes, durations, progress, or download URLs.
 
 Both `/api/v1/analyze` and `/api/v1/analyzer/preview` delegate to the same analyzer service. Public URL validation rejects invalid schemes, embedded credentials, localhost, private/loopback/reserved/link-local/metadata addresses, and unsafe DNS answers. Adapter implementations must reuse the validated resolution result to prevent DNS rebinding between validation and outbound access.
+
+## Final production-hardening status
+
+The repository has completed a focused production-hardening review without adding unsupported downloader behavior or rewriting working application flows. `ARCHITECTURE.md` documents the feature boundaries, backend service/repository layering, Redis Streams worker flow, analyzer boundary, storage controls, and deployment responsibilities.
+
+The final security baseline includes Argon2 password hashing, short-lived access JWTs, refresh-token rotation and revocation, issuer/audience/expiration validation, request IDs, explicit error responses, security headers, rate limiting, strict CORS production validation, SSRF and DNS-rebinding defenses, canonical managed-storage paths, symlink/traversal protection, and authenticated user isolation.
+
+CI now runs backend tests, Python compilation, Ruff, mypy, Alembic migrations against PostgreSQL, Flutter dependency/code-generation checks when configured, format checks, analyze, tests, Docker Compose configuration validation, and backend image build. The workflow intentionally does not fabricate mobile-device verification: Android/iOS builds, signing, notification rendering, OS background scheduling, and production network controls require their respective SDKs, devices, credentials, and deployment environment.
+
+The Android release configuration no longer signs release artifacts with debug keys. A real release keystore must be injected by the deployment environment before publishing an Android release. This is an intentional blocker rather than a hidden insecure default.
+
+## Final QA reporting rule
+
+A green sandbox test run does not by itself establish production readiness. Production deployment remains blocked until the release keystore, protected PostgreSQL and Redis deployment, TLS/reverse-proxy policy, external egress controls, encrypted backups and restore tests, dependency/image scans, observability, and platform-specific Android/iOS validation are completed and accepted by the operator.

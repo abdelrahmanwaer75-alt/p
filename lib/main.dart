@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'core_api.dart';
+
 void main() => runApp(const VidoraApp());
 
 enum AppLanguage { english, arabic }
@@ -22,6 +24,7 @@ class AppCopy {
       ? 'مساحتك الآمنة لإدارة الوسائط المصرّح بتنزيلها والاستمتاع بها.'
       : 'Your trusted space for managing authorized media and enjoying it offline.';
   String get getStarted => ar ? 'ابدأ الآن' : 'Get started';
+  String get skip => ar ? 'تخطي' : 'Skip';
   String get greeting => ar ? 'مساء الخير' : 'Good evening';
   String get homeBody => ar
       ? 'كل ما تحتاجه لإدارة مكتبة الوسائط الخاصة بك.'
@@ -107,6 +110,7 @@ class _VidoraAppState extends State<VidoraApp> {
       home: onboarded
           ? Shell(
               copy: copy,
+              api: VidoraApiClient(),
               language: language,
               theme: theme,
               onLanguage: setLanguage,
@@ -194,6 +198,7 @@ class Onboarding extends StatelessWidget {
 
 class Shell extends StatefulWidget {
   final AppCopy copy;
+  final VidoraApiClient api;
   final AppLanguage language;
   final ThemeChoice theme;
   final ValueChanged<AppLanguage> onLanguage;
@@ -201,6 +206,7 @@ class Shell extends StatefulWidget {
   const Shell({
     super.key,
     required this.copy,
+    required this.api,
     required this.language,
     required this.theme,
     required this.onLanguage,
@@ -215,7 +221,7 @@ class _ShellState extends State<Shell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HomePage(copy: widget.copy),
+      HomePage(copy: widget.copy, api: widget.api),
       EmptyPage(
         icon: Icons.download_rounded,
         title: widget.copy.emptyDownloads,
@@ -269,7 +275,79 @@ class _ShellState extends State<Shell> {
 
 class HomePage extends StatelessWidget {
   final AppCopy copy;
-  const HomePage({super.key, required this.copy});
+  final VidoraApiClient api;
+  const HomePage({super.key, required this.copy, required this.api});
+
+  Future<void> _analyze(BuildContext context) async {
+    final controller = TextEditingController();
+    var loading = false;
+    String? result;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(copy.analyzeUrl),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                  hintText: 'https://example.com/video',
+                ),
+              ),
+              if (result != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(result!),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(copy.skip),
+            ),
+            FilledButton(
+              onPressed: loading
+                  ? null
+                  : () async {
+                      if (controller.text.trim().isEmpty) return;
+                      setDialogState(() {
+                        loading = true;
+                        result = null;
+                      });
+                      try {
+                        final preview = await api.previewUrl(
+                          controller.text.trim(),
+                        );
+                        setDialogState(() {
+                          loading = false;
+                          result = '${preview.platform}: ${preview.message}';
+                        });
+                      } catch (_) {
+                        setDialogState(() {
+                          loading = false;
+                          result = copy.authorizedOnly;
+                        });
+                      }
+                    },
+              child: loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(copy.analyzeUrl),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => CustomScrollView(
     slivers: [
@@ -321,17 +399,7 @@ class HomePage extends StatelessWidget {
                     Text(copy.authorizedOnly),
                     const SizedBox(height: 16),
                     FilledButton(
-                      onPressed: () => showModalBottomSheet(
-                        context: context,
-                        showDragHandle: true,
-                        builder: (_) => Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            copy.comingSoon,
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                        ),
-                      ),
+                      onPressed: () => _analyze(context),
                       child: Text(copy.pasteUrl),
                     ),
                   ],

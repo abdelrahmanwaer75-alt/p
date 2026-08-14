@@ -104,3 +104,11 @@ flutter test
 ```
 
 The complete Flutter test suite passed. Android/iOS device builds and runtime background execution still require their platform SDKs, simulators/devices, and signing environments.
+
+## Backend architecture
+
+The backend now follows the same modular boundaries as the Flutter client. `app/main.py` is limited to application construction, middleware, exception handlers, lifespan, router registration, and health wiring. API routes live under `app/api/routes`, shared authentication and service dependencies under `app/api/dependencies.py`, business services under `app/services`, repositories under `app/repositories`, and SQLAlchemy boundaries under `app/db`.
+
+Redis Streams is isolated under `app/queue`, filesystem access under `app/storage`, and worker execution under `app/workers/download_worker.py`; `backend/worker.py` remains a compatibility entrypoint. Platform extractors now live in per-platform subpackages. Existing legacy imports remain available through compatibility exports so the refactor does not change public behavior.
+
+Backend QA after the modularization passed with `65 passed`; `python3 -m compileall -q backend` also passed. The suite retains one upstream Starlette/httpx deprecation warning that does not affect test results.

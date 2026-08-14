@@ -75,3 +75,18 @@ The Flutter root was reorganized without rebuilding the application. `main.dart`
 | `libmpv` dependency for media_kit tests | Installed in QA sandbox |
 
 The widget test was made deterministic by providing a test API client and test router; it still verifies onboarding and navigation to login. The full test suite includes player state validation. Physical Android/iOS builds, permissions, notifications, background execution, and real device playback remain deployment-environment checks.
+
+## Backend modularization QA update
+
+The backend was reorganized in place. `main.py` is now wiring-only; route handlers are grouped under `app/api/routes`, shared dependencies under `app/api/dependencies.py`, business logic boundaries under `app/services`, database access under `app/repositories` and `app/db`, Redis Streams under `app/queue`, filesystem access under `app/storage`, and worker execution under `app/workers`. The legacy `backend/worker.py`, `app/db`, `app.queue`, `app.security`, and config import paths remain compatible through thin exports.
+
+| Backend check | Result |
+|---|---:|
+| `python3 -m compileall -q backend` | Passed |
+| `PYTHONPATH=backend pytest -q` | **65 passed** |
+| Main route decorator scan | No business route decorators remain in `main.py` |
+| Route raw Redis/filesystem/database scan | No direct infrastructure implementation in route modules |
+| Extractor layout | Platform-specific subpackages for Reddit, Vimeo, Dailymotion, SoundCloud, and Twitch |
+| Test layout | Tests grouped under api, services, repositories, queue, security, and integration |
+
+The only test output warning is an upstream Starlette/httpx deprecation warning. Runtime Docker, PostgreSQL, Redis, and device-level deployment checks remain environment-specific.

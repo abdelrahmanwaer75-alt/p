@@ -158,6 +158,26 @@ class ApiClient {
     return ManagedFile.fromJson((response.data?['file'] as Map?)?.cast<String, dynamic>() ?? const {});
   }
 
+  Future<List<Playlist>> playlists() async {
+    final response = await _request(() => _dio.get<List<dynamic>>('/api/v1/playlists', options: _options()));
+    return _objects(response.data).map(Playlist.fromJson).toList();
+  }
+  Future<Playlist> createPlaylist(String name, {String? description}) async {
+    final response = await _request(() => _dio.post<Map<String, dynamic>>('/api/v1/playlists', data: {'name': name, 'description': description}, options: _options()));
+    return Playlist.fromJson(response.data ?? const {});
+  }
+  Future<Playlist> updatePlaylist(String id, {String? name, String? description}) async {
+    final response = await _request(() => _dio.patch<Map<String, dynamic>>('/api/v1/playlists/$id', data: {'name': name, 'description': description}, options: _options()));
+    return Playlist.fromJson(response.data ?? const {});
+  }
+  Future<void> deletePlaylist(String id) async { await _request(() => _dio.delete('/api/v1/playlists/$id', options: _options())); }
+  Future<Playlist> addPlaylistItem(String playlistId, String libraryItemId, {int? position}) async => _playlistAction('/api/v1/playlists/$playlistId/items', {'library_item_id': libraryItemId, 'position': position});
+  Future<Playlist> removePlaylistItem(String playlistId, String itemId) async { final response = await _request(() => _dio.delete<Map<String, dynamic>>('/api/v1/playlists/$playlistId/items/$itemId', options: _options())); return Playlist.fromJson(response.data ?? const {}); }
+  Future<Playlist> reorderPlaylist(String id, List<String> itemIds) async => _playlistAction('/api/v1/playlists/$id/reorder', {'item_ids': itemIds});
+  Future<Playlist> playPlaylist(String id) async { final response = await _request(() => _dio.post<Map<String, dynamic>>('/api/v1/playlists/$id/play', options: _options())); return Playlist.fromJson(response.data ?? const {}); }
+  Future<void> downloadPlaylist(String id) async { await _request(() => _dio.post('/api/v1/playlists/$id/download', options: _options())); }
+  Future<Playlist> _playlistAction(String path, Map<String, dynamic> data) async { final response = await _request(() => _dio.post<Map<String, dynamic>>(path, data: data, options: _options())); return Playlist.fromJson(response.data ?? const {}); }
+
   Future<List<LibraryItem>> library() => _library('/api/v1/library');
   Future<List<LibraryItem>> favorites() => _library('/api/v1/favorites');
   Future<List<LibraryItem>> history() => _library('/api/v1/history');

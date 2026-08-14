@@ -30,8 +30,10 @@ from app.schemas.auth import (
 from app.schemas.common import AnalyzeRequest, HealthResponse, VersionResponse, utc_now
 from app.schemas.downloads import DownloadCancelResponse, DownloadTask, DownloadTaskAccepted, DownloadTaskCreate
 from app.schemas.files import FileActionResponse, FileInfoResponse, FileItem, FileMoveRequest, FileRenameRequest, FileSort
+from app.schemas.playlists import Playlist, PlaylistCreate, PlaylistItemCreate, PlaylistMessage, PlaylistReorder, PlaylistUpdate
 from app.schemas.library import FavoriteUpdate, LibraryItem, LibraryItemCreate
 from app.repositories.library import LibraryRepository
+from app.repositories.playlists import PlaylistRepository
 from app.services.analyzer import build_preview
 from app.queue import DownloadQueue
 from app.repositories.downloads import DownloadRepository
@@ -49,10 +51,12 @@ from app.services.auth import (
 )
 from app.services.downloads import get_download_service
 from app.services.files import FileManagerService
+from app.security import security_middleware
 
 settings = get_settings()
 library_repository = LibraryRepository()
 file_manager = FileManagerService(library_repository)
+playlist_repository = PlaylistRepository()
 logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("vidora.api")
 
@@ -69,12 +73,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
 if settings.auto_create_db:
     init_database()
+app.middleware("http")(security_middleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
+    expose_headers=["X-Request-ID", "X-RateLimit-Limit", "X-RateLimit-Remaining", "Retry-After"],
 )
 
 api = APIRouter(prefix=settings.api_prefix)
@@ -82,28 +88,42 @@ api = APIRouter(prefix=settings.api_prefix)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    logger.warning("Validation error on %s %s: %s", request.method, request.url.path, exc.errors())
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.warning("Validation error request_id=%s method=%s path=%s", request_id, request.method, request.url.path)
     return JSONResponse(
         status_code=422,
-        content={"error": {"code": "validation_error", "message": "Request validation failed", "details": jsonable_encoder(exc.errors())}},
+        content={"error": {"code": "validation_error", "message": "Request validation failed", "details": jsonable_encoder(exc.errors()), "request_id": request_id}},
+        headers={"X-Request-ID": request_id},
     )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_json_handler(request: Request, exc: HTTPException):
+    request_id = getattr(request.state, "request_id", "unknown")
+    detail = exc.detail if isinstance(exc.detail, str) else "Request rejected"
+    code = "unauthorized" if exc.status_code == 401 else "forbidden" if exc.status_code == 403 else "request_rejected"
+    return JSONResponse(status_code=exc.status_code, content={"detail": detail, "error": {"code": code, "message": detail, "request_id": request_id}}, headers={**(exc.headers or {}), "X-Request-ID": request_id})
 
 
 @app.exception_handler(SQLAlchemyError)
 async def database_exception_handler(request: Request, exc: SQLAlchemyError):
-    logger.exception("Database error on %s %s", request.method, request.url.path)
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.exception("Database error request_id=%s method=%s path=%s", request_id, request.method, request.url.path)
     return JSONResponse(
         status_code=503,
-        content={"error": {"code": "database_unavailable", "message": "The service is temporarily unavailable"}},
+        content={"error": {"code": "database_unavailable", "message": "The service is temporarily unavailable", "request_id": request_id}},
+        headers={"X-Request-ID": request_id},
     )
 
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    logger.exception("Unhandled request error on %s %s", request.method, request.url.path)
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.exception("Unhandled request error request_id=%s method=%s path=%s", request_id, request.method, request.url.path)
     return JSONResponse(
         status_code=500,
-        content={"error": {"code": "internal_error", "message": "Internal server error"}},
+        content={"error": {"code": "internal_error", "message": "Internal server error", "request_id": request_id}},
+        headers={"X-Request-ID": request_id},
     )
 
 
@@ -152,8 +172,10 @@ async def verify_email(payload: EmailVerificationConfirm) -> ActionMessage:
 
 @api.get("/user/me", response_model=UserResponse, tags=["auth"])
 @api.get("/auth/me", response_model=UserResponse, tags=["auth"])
-async def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> UserResponse:
-    return current_user(credentials)
+async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> UserResponse:
+    user = current_user(credentials)
+    request.state.user_id = str(user.id)
+    return user
 
 
 @api.post("/auth/logout", response_model=ActionMessage, tags=["auth"])
@@ -167,6 +189,80 @@ async def logout_account(payload: LogoutRequest, user: UserResponse = Depends(ge
 async def analyzer_preview(payload: AnalyzeRequest) -> AnalyzerResult:
     """Validate a public URL and identify its platform without fetching content."""
     return await build_preview(str(payload.url))
+
+
+@api.get("/playlists", response_model=list[Playlist], tags=["playlists"])
+async def list_playlists(user: UserResponse = Depends(get_current_user)) -> list[Playlist]:
+    return playlist_repository.list(user.id)
+
+
+@api.post("/playlists", response_model=Playlist, status_code=201, tags=["playlists"])
+async def create_playlist(payload: PlaylistCreate, user: UserResponse = Depends(get_current_user)) -> Playlist:
+    return playlist_repository.create(user.id, payload)
+
+
+@api.get("/playlists/{playlist_id}", response_model=Playlist, tags=["playlists"])
+async def get_playlist(playlist_id: UUID, user: UserResponse = Depends(get_current_user)) -> Playlist:
+    playlist = playlist_repository.get(user.id, playlist_id)
+    if playlist is None:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    return playlist
+
+
+@api.patch("/playlists/{playlist_id}", response_model=Playlist, tags=["playlists"])
+async def update_playlist(playlist_id: UUID, payload: PlaylistUpdate, user: UserResponse = Depends(get_current_user)) -> Playlist:
+    playlist = playlist_repository.update(user.id, playlist_id, payload)
+    if playlist is None:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    return playlist
+
+
+@api.delete("/playlists/{playlist_id}", response_model=Playlist, tags=["playlists"])
+async def delete_playlist(playlist_id: UUID, user: UserResponse = Depends(get_current_user)) -> Playlist:
+    playlist = playlist_repository.delete(user.id, playlist_id)
+    if playlist is None:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    return playlist
+
+
+@api.post("/playlists/{playlist_id}/items", response_model=Playlist, tags=["playlists"])
+async def add_playlist_item(playlist_id: UUID, payload: PlaylistItemCreate, user: UserResponse = Depends(get_current_user)) -> Playlist:
+    playlist = playlist_repository.add_item(user.id, playlist_id, payload)
+    if playlist is None:
+        raise HTTPException(status_code=404, detail="Playlist or library item not found")
+    return playlist
+
+
+@api.delete("/playlists/{playlist_id}/items/{item_id}", response_model=Playlist, tags=["playlists"])
+async def remove_playlist_item(playlist_id: UUID, item_id: UUID, user: UserResponse = Depends(get_current_user)) -> Playlist:
+    playlist = playlist_repository.remove_item(user.id, playlist_id, item_id)
+    if playlist is None:
+        raise HTTPException(status_code=404, detail="Playlist or item not found")
+    return playlist
+
+
+@api.post("/playlists/{playlist_id}/reorder", response_model=Playlist, tags=["playlists"])
+async def reorder_playlist(playlist_id: UUID, payload: PlaylistReorder, user: UserResponse = Depends(get_current_user)) -> Playlist:
+    playlist = playlist_repository.reorder(user.id, playlist_id, payload.item_ids)
+    if playlist is None:
+        raise HTTPException(status_code=400, detail="Playlist item order is invalid")
+    return playlist
+
+
+@api.post("/playlists/{playlist_id}/play", response_model=Playlist, tags=["playlists"])
+async def play_playlist(playlist_id: UUID, user: UserResponse = Depends(get_current_user)) -> Playlist:
+    playlist = playlist_repository.get(user.id, playlist_id)
+    if playlist is None:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    return playlist
+
+
+@api.post("/playlists/{playlist_id}/download", response_model=PlaylistMessage, status_code=202, tags=["playlists"])
+async def download_playlist(playlist_id: UUID, user: UserResponse = Depends(get_current_user)) -> PlaylistMessage:
+    playlist = playlist_repository.get(user.id, playlist_id)
+    if playlist is None:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    raise HTTPException(status_code=501, detail="FEATURE_NOT_AVAILABLE: playlist downloads require an approved extractor implementation")
 
 
 @api.post("/library", response_model=LibraryItem, status_code=201, tags=["library"])
@@ -330,7 +426,6 @@ async def delete_download(task_id: UUID, user: UserResponse = Depends(get_curren
 
 @app.websocket("/api/v1/ws/downloads")
 async def download_events(websocket: WebSocket) -> None:
-    await websocket.accept()
     authorization = websocket.headers.get("authorization", "")
     if not authorization.lower().startswith("bearer "):
         await websocket.close(code=4401)
@@ -340,6 +435,7 @@ async def download_events(websocket: WebSocket) -> None:
     except HTTPException:
         await websocket.close(code=4401)
         return
+    await websocket.accept()
     queue = DownloadQueue()
     repository = DownloadRepository()
     last_id = "$"

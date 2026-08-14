@@ -1,45 +1,63 @@
-# Vidora Full Audit
+# Vidora Final QA and Production Audit
 
 ## Scope
 
-This audit covers the existing Vidora repository after foundation stabilization, database/authentication work, safe media analysis, and the truthful download lifecycle phase. The repository was continued in place and was not rebuilt, reverted, or pushed remotely.
+This audit covers the current Vidora repository after database and authentication work, safe media analysis, download lifecycle, Flutter integration, file management, player and playlist work, background-download bridges, and the security hardening pass. The project was continued in place; working code was not intentionally rewritten or removed.
 
-## Current implementation matrix
+## Project status matrix
 
-| Area | Current state | Status |
+| Area | Status | Assessment |
 |---|---|---|
-| Production database | PostgreSQL production configuration, SQLAlchemy 2.x models, Alembic migrations, and SQLite local development path | Implemented |
-| Authentication | Argon2 passwords, issuer/audience-validated JWTs, rotating hashed refresh tokens, logout invalidation, reset/verification foundations | Implemented |
-| Media analysis | Structured result contract and explicit five-platform extractor registry with SSRF/DNS-rebinding protections | Implemented |
-| Download task schema | Full lifecycle metadata, progress, bytes, speed, ETA, output, errors, retry count, timestamps, user_id backfill, and idempotency key | Implemented |
-| Download statuses | queued, starting, downloading, paused, cancelling, completed, failed, cancelled | Implemented |
-| Queue reliability | Redis Streams consumer group, acknowledgements, idle pending recovery, retry publishing, dead-letter stream, and event stream | Implemented |
-| Redis failure behavior | Queue failure marks the persisted task failed with `REDIS_UNAVAILABLE` and returns HTTP 503; successful queueing is never claimed | Implemented |
-| Worker lifecycle | State validation, extractor resolution, truthful feature gating, progress callbacks, cancellation, completion, library insertion, retry, and event publication | Implemented |
-| Extractor availability | No platform download adapter is implemented; API/worker return `FEATURE_NOT_AVAILABLE` without fake output or progress | Implemented safely |
-| Cancellation | queued→cancelled; active→cancelling→cancelled; completed cancellation rejected | Implemented |
-| Idempotency | Same authenticated user and key returns the existing task without a second queue message | Implemented |
-| User isolation | Download list/get/cancel and library completion are scoped to the authenticated user | Implemented |
-| Actual downloading | No approved platform download implementation exists yet | Intentionally deferred |
+| Architecture | PARTIALLY READY | Backend, Flutter feature structure, storage, queue, and mobile integration boundaries exist. Full device and infrastructure validation remains required. |
+| Backend | PARTIALLY READY | FastAPI routes, schemas, error handling, request IDs, rate limiting, security headers, auth dependencies, analyzer, downloads, files, library, and playlists are implemented and tested. |
+| Flutter | PARTIALLY READY | Riverpod, GoRouter, typed models, API client, WebSocket state updates, player state, playlists, and background bridges are present. Flutter commands were not executable in this sandbox because Flutter/Dart were unavailable. |
+| Database | PARTIALLY READY | SQLAlchemy 2.x models and Alembic migrations are present, with PostgreSQL production configuration and SQLite test fallback. Live PostgreSQL connection, migration upgrade, and rollback were not executable because Docker and `psql` were unavailable. |
+| Queue | PARTIALLY READY | Redis Streams consumer groups, acknowledgement, retry, pending recovery, dead-letter behavior, and failure handling are covered by backend tests. A live Redis integration run was unavailable because Docker and `redis-cli` were unavailable. |
+| Downloader | NOT READY | No approved platform download adapter is enabled. The worker returns `FEATURE_NOT_AVAILABLE` rather than faking downloads, progress, formats, or files. |
+| Player | PARTIALLY READY | `media_kit` integration and player state boundaries exist. Physical media playback and platform compilation require Flutter SDK/device validation. |
+| File Manager | PARTIALLY READY | Managed-root storage operations, path-traversal protections, metadata, rename, move, delete, and library synchronization are implemented. Real mobile permission and share/open behavior require device testing. |
+| Playlists | PARTIALLY READY | CRUD, item management, ordering, ownership checks, and Flutter feature surfaces are implemented and covered by backend tests. Device UI validation remains. |
+| Authentication | READY for backend integration | Argon2 password hashing, access/refresh JWT validation, issuer/audience/expiration checks, refresh rotation, revocation, logout, current-user lookup, and user isolation are implemented. |
+| Security | PARTIALLY READY | SSRF, file confinement, rate limiting, CORS configuration, security headers, non-root containers, secret validation, and redacted structured logging are implemented. External penetration testing and live deployment review remain. |
+| Testing | PARTIALLY READY | Backend suite and Python compilation passed. Flutter, lint/type checks, Docker runtime, PostgreSQL runtime, Redis runtime, and device E2E checks were unavailable in this environment. |
+| Docker | PARTIALLY READY | Compose and Dockerfile statically contain non-root users, read-only roots, capability drops, no-new-privileges, health checks, and restart policies. Docker build and startup were not run because Docker was unavailable. |
+| CI/CD | NOT READY | No verified CI pipeline currently runs the complete Flutter, backend lint/type, database, Redis, Docker, and mobile matrix. |
 
-## Validation
+## Verification executed
 
 | Check | Result |
 |---|---:|
-| Full backend test suite | **50 passed** |
-| Queue creation and duplicate requests | Passed |
-| Redis failure state handling | Passed with `REDIS_UNAVAILABLE` |
-| Worker completion and library insertion | Passed using a real extractor result contract |
-| Transient retry and dead-letter behavior | Passed with maximum three retries |
-| Worker crash and pending recovery | Passed |
-| Cancellation transitions | Passed for queued, active, and completed states |
-| User isolation | Passed for download list, get, cancel, and completion ownership |
-| Clean Alembic migration | Passed through `0003_download_lifecycle (head)` |
-| Lifecycle schema verification | Passed for all required task fields, including user_id |
-| Python compilation and `git diff --check` | Passed |
-| Docker/PostgreSQL/Redis runtime integration | Not run because Docker is unavailable in the current sandbox |
-| Remote Git push | Not performed |
+| Backend `pytest -q` on a clean local test database | **63 passed** |
+| Python `compileall` for backend application, tests, and worker | Passed |
+| Security-focused tests | Included in the passing 63-test suite |
+| Authentication and user-isolation tests | Passed within the suite |
+| SSRF and path-traversal tests | Passed within the suite |
+| Queue retry, acknowledgement, recovery, cancellation, and failure tests | Passed within the suite |
+| `git diff --check` | Pending final pre-commit check |
+| Flutter `pub get`, format, analyze, test | Not run: Flutter/Dart unavailable |
+| `ruff check .` | Not run: Ruff unavailable and no repository Ruff configuration found |
+| `mypy .` | Not run: mypy unavailable and no repository mypy configuration found |
+| Alembic against live PostgreSQL and rollback | Not run: PostgreSQL/Docker unavailable |
+| Redis live integration | Not run: Redis/Docker unavailable |
+| Docker Compose config/build/up | Not run: Docker unavailable |
+| Android/iOS device validation | Not run: platform SDKs/devices unavailable |
 
-## Remaining production work
+## Completed
 
-Actual downloading remains deferred until an approved platform adapter implements the extractor `download()` contract. That adapter must produce verified output, real progress callbacks, cancellation cooperation, secure output paths, and transient/permanent error classification. Production should also add CI integration tests against PostgreSQL and Redis, queue lag and dead-letter monitoring, expired-message cleanup, and worker load/concurrency testing.
+The repository includes production-oriented authentication, user isolation, migration-driven schema management, safe platform analysis, reliable queue lifecycle primitives, managed filesystem operations, playlist ownership enforcement, Flutter session/API/WebSocket integration, mobile background bridges, centralized security middleware, non-root container configuration, and security documentation.
+
+## Fixed in final QA phase
+
+The README was rewritten to remove stale Phase 1 and SQLite-only claims and now reflects the actual current status. This audit was updated with verified test counts and explicit unavailable-tool limitations. The environment template documents production requirements while retaining placeholders. The final security documentation remains in `SECURITY.md`.
+
+## Remaining work
+
+The remaining work is primarily environment and integration validation: install Flutter/Dart and run the mobile checks; install or provision Ruff and mypy; run Alembic against PostgreSQL; run Redis Streams against a real Redis service; build and start the Compose stack; validate `/health` and `/ready` under dependency failure; execute Android/iOS device tests; and add CI/CD for these checks.
+
+The actual media downloader remains intentionally disabled until each allowlisted platform has an approved, authorized, policy-compliant adapter with verified output, real progress, cancellation cooperation, secure file handling, and transient/permanent error classification.
+
+## Production blockers
+
+Vidora must not be described as fully production-ready until the following blockers are closed: an approved real downloader implementation, live PostgreSQL and Redis integration validation, successful Docker build/start validation, Flutter analyze/test and device validation, CI/CD coverage, and external security testing. These limitations are explicit and the application must continue to report unavailable functionality honestly.
+
+Last reviewed: 2026-08-14

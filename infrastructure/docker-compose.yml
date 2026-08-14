@@ -1,12 +1,19 @@
 services:
   api:
     restart: unless-stopped
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
     build:
       context: ../backend
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       LOG_LEVEL: INFO
-      DATABASE_URL: postgresql+psycopg://vidora:vidora@postgres:5432/vidora
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:?Set POSTGRES_DB}
       DOWNLOAD_DIRECTORY: /app/data/media
       AUTO_CREATE_DB: "false"
       REDIS_URL: redis://redis:6379/0
@@ -31,13 +38,20 @@ services:
 
   worker:
     restart: unless-stopped
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
     build:
       context: ../backend
     command: python worker.py
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       LOG_LEVEL: INFO
-      DATABASE_URL: postgresql+psycopg://vidora:vidora@postgres:5432/vidora
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:?Set POSTGRES_DB}
       DOWNLOAD_DIRECTORY: /app/data/media
       AUTO_CREATE_DB: "false"
       REDIS_URL: redis://redis:6379/0
@@ -59,21 +73,27 @@ services:
 
   postgres:
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: vidora
-      POSTGRES_PASSWORD: vidora
-      POSTGRES_DB: vidora
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vidora -d vidora"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
     image: redis:7-alpine
     command: redis-server --appendonly yes
     volumes:

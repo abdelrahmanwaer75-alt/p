@@ -1,60 +1,87 @@
 # Vidora
 
-**Download. Organize. Enjoy.**
+Vidora is a Flutter client and FastAPI backend for authorized media analysis, download lifecycle management, local file management, media playback, and playlists. The project is continued in place and intentionally does not bypass DRM, CAPTCHA, paywalls, authentication, anti-bot controls, or platform restrictions.
 
-Vidora is a Flutter foundation for an authorized media management application. This local Phase 1 implementation establishes the product shell without pretending that download or extraction functionality is complete.
+## Project status
 
-## Phase 1 delivered
+The application has a production-oriented architecture, but it is **not yet a fully production-ready downloader** because approved platform download adapters are not implemented. The backend refuses unavailable download execution with `FEATURE_NOT_AVAILABLE`; it does not fabricate metadata, formats, progress, or output files.
 
-The application includes a Material 3 design system, light/dark/system themes, English and Arabic copy, runtime RTL/LTR direction switching, onboarding, a five-destination bottom navigation shell, home dashboard, empty states, settings controls, and reusable empty-state cards. The analyzer action is intentionally presented as a coming-soon surface; no downloader, extractor, DRM bypass, or fake API response has been added.
+| Area | Status | Notes |
+|---|---|---|
+| Backend API | Partially ready | FastAPI routes, typed schemas, unified errors, request IDs, security middleware, and OpenAPI are implemented. |
+| Authentication | Ready for integration testing | Argon2 passwords, access/refresh JWTs, rotation, revocation, issuer/audience/expiration checks, and protected user-scoped routes are implemented. |
+| Database | Partially ready | SQLAlchemy 2.x and Alembic migrations target PostgreSQL in production; SQLite is used for local tests. |
+| Queue and worker | Partially ready | Redis Streams, consumer groups, acknowledgement, retry, pending recovery, dead-letter handling, and truthful state transitions are covered by tests. |
+| Downloader | Not ready for production | No approved platform download adapter is enabled. |
+| Flutter integration | Partially ready | Riverpod, GoRouter, typed API models, WebSocket download updates, player, playlists, and background bridges are present; Flutter SDK validation was unavailable in this sandbox. |
+| Docker | Configuration ready | API and worker use non-root UID/GID, read-only roots, dropped capabilities, health checks, and restart policies. Runtime build/up validation requires Docker. |
 
-## Run locally
+## Supported analysis platforms
+
+The analysis allowlist contains only Reddit, Vimeo, Dailymotion, SoundCloud, and Twitch. Unsupported platforms and invalid URLs are rejected. Analysis protects against localhost, private, reserved, link-local, metadata, invalid-scheme, and `file://` targets, with DNS-rebinding checks before outbound access.
+
+## Local setup
+
+The backend requires Python 3.12 or a compatible Python environment. Install dependencies and run the API from the repository root:
 
 ```bash
-cd /home/ubuntu/vidora
-/home/ubuntu/tools/flutter/bin/flutter run -d linux
+cd vidora/backend
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload
 ```
 
-For Android or iOS development, use a host with the corresponding SDKs and devices configured:
+Copy `backend/.env.example` to the deployment environment and replace every placeholder. Production must use PostgreSQL, `AUTO_CREATE_DB=false`, an explicit `ALLOWED_ORIGINS` list, protected Redis, and a randomly generated `JWT_SECRET` of at least 32 characters. Never commit `.env` files or real credentials.
+
+## Flutter setup
+
+On a machine with Flutter and the required platform SDKs installed:
 
 ```bash
-flutter run -d <device-id>
-```
-
-## Verification
-
-The following checks pass in the local environment:
-
-```bash
+flutter pub get
+dart format .
 flutter analyze
 flutter test
-CC=clang CXX=clang++ flutter build linux --debug
+flutter run --dart-define=API_BASE_URL=http://<host>:8000
 ```
 
-The Linux debug binary is generated at `build/linux/x64/debug/bundle/vidora`. Android and iOS compilation were not claimed because this environment does not include the Android SDK/emulator or macOS/Xcode toolchain.
+Do not hardcode `127.0.0.1:8000` for physical devices. Use an API base URL appropriate to the Android emulator, iOS simulator, local network, or production deployment. Android background work is subject to WorkManager constraints, and iOS background URLSession execution is subject to Apple scheduling and networking policies.
 
-## Project structure
+## Docker
 
-The current foundation is intentionally small and easy to extend. The primary UI entry point is `lib/main.dart`, while `test/widget_test.dart` contains the onboarding and navigation smoke test. Future phases should split the application into the architecture described by the master specification, beginning with domain models and API contracts before implementing analyzer and download services.
+The Compose file provisions API, worker, PostgreSQL, and Redis. It requires `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, and `JWT_SECRET` from the environment:
 
-## Legal boundary
+```bash
+export POSTGRES_USER=vidora
+export POSTGRES_PASSWORD='<secret from a secret manager>'
+export POSTGRES_DB=vidora
+export JWT_SECRET='<long random production secret>'
+docker compose -f infrastructure/docker-compose.yml config
+docker compose -f infrastructure/docker-compose.yml up --build
+```
 
-Vidora must only process media that the user is authorized to download and that the source platform permits downloading. DRM circumvention, paywall bypass, authentication bypass, CAPTCHA bypass, anti-bot bypass, private-content extraction without authorization, and arbitrary shell execution are outside the product and must remain excluded.
+The API applies Alembic migrations before starting. PostgreSQL and Redis should remain on private networks and should not be exposed directly to the public Internet.
 
-## Phase 4 download engine foundation
+## Health endpoints
 
-The backend now exposes a queue-oriented download task contract under `/api/v1/downloads`. Tasks require an explicit authorization confirmation, start in `queued` state, and report `progress_percent: null` with `progress_known: false` until a real worker can provide measured progress. The worker boundary deliberately refuses to execute until an authorized, policy-aware adapter is configured. No raw shell command, subprocess, DRM circumvention, CAPTCHA bypass, or fabricated progress is present.
+`GET /health` reports process health. `GET /ready` checks application dependencies and should be used by deployment probes. Dependency failures must be treated as unavailable rather than reported as successful readiness.
 
-## Persistent download storage
+## Testing
 
-Download tasks are now stored in SQLite through `backend/app/repositories/downloads.py`, rather than only in process memory. The default local database is `backend/data/vidora_downloads.db`, which is created automatically and excluded from source control. The repository boundary can later be replaced by PostgreSQL without changing the API contract.
+The verified sandbox command is:
 
-## Redis download queue
+```bash
+rm -f backend/data/vidora_dev.db
+PYTHONPATH=backend pytest -q
+python3 -m compileall -q backend/app backend/tests backend/worker.py
+```
 
-Download creation now persists the task and publishes its identifier to the Redis list `vidora:downloads`. The worker entrypoint is `backend/worker.py`; in the Compose stack it runs as a separate `worker` service. The worker consumes task IDs and records a measured terminal failure when no authorized platform adapter is configured. It never fabricates progress and never executes raw shell commands.
+The current result is **63 passed** and successful Python compilation. Flutter, Docker, PostgreSQL runtime, Redis runtime, `ruff`, and `mypy` could not be executed in this sandbox because their executables or platform toolchains are unavailable. They remain required CI or developer-machine checks.
 
-For local Compose development, start the stack with `docker compose -f infrastructure/docker-compose.yml up --build`. The API is available on port 8000. Production deployments must replace the development JWT secret and configure an authorized extractor adapter before enabling real media execution.
+## Documentation
 
-## Durable files API
+Further implementation and QA details are documented in `AUDIT.md`, `SECURITY.md`, `DATABASE_AUTH_REPORT.md`, `MEDIA_ANALYSIS_REPORT.md`, `DOWNLOAD_LIFECYCLE_REPORT.md`, `DOWNLOAD_FILE_MANAGER_REPORT.md`, `MEDIA_PLAYER_PLAYLIST_REPORT.md`, `BACKGROUND_DOWNLOAD_REPORT.md`, and `FLUTTER_INTEGRATION_REPORT.md`.
 
-The authenticated `GET /api/v1/files` endpoint now returns only library records with a durable `media_path`. The Flutter Files tab uses this endpoint, while the general library, favorites, history, and downloads views remain separate. A record is not presented as an offline file until a real worker has produced and persisted its media path.
+## Legal and safety boundary
+
+Vidora must only process media the user is authorized to download and the source platform permits downloading. DRM circumvention, paywall bypass, authentication bypass, CAPTCHA bypass, anti-bot bypass, private-content extraction without authorization, and arbitrary shell execution are excluded by design.

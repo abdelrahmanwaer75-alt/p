@@ -4,6 +4,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+dependencies {
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+}
+
 android {
     namespace = "com.vidora.vidora"
     compileSdk = flutter.compileSdkVersion

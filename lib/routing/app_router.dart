@@ -12,6 +12,8 @@ import '../features/downloads/downloads_page.dart';
 import '../features/library/library_page.dart';
 import '../features/favorites/favorites_page.dart';
 import '../features/history/history_page.dart';
+import '../features/playlists/playlists_page.dart';
+import '../features/player/player_page.dart';
 import '../features/settings/settings_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -23,7 +25,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final auth = ref.read(authProvider);
       final location = state.matchedLocation;
-      final protected = location == '/home' || location.startsWith('/analyze') || location.startsWith('/downloads') || location.startsWith('/library') || location.startsWith('/favorites') || location.startsWith('/history') || location.startsWith('/settings');
+      final protected = location == '/home' || location.startsWith('/analyze') || location.startsWith('/downloads') || location.startsWith('/library') || location.startsWith('/favorites') || location.startsWith('/history') || location.startsWith('/settings') || location.startsWith('/playlists') || location.startsWith('/player');
       if (auth.status == AuthStatus.restoring && location != '/splash') return '/splash';
       if (auth.status == AuthStatus.restoring) return null;
       if (auth.status == AuthStatus.authenticated && (location == '/splash' || location == '/onboarding' || location == '/login' || location == '/register')) return '/home';
@@ -45,6 +47,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         GoRoute(path: '/favorites', builder: (_, __) => const FavoritesPage()),
         GoRoute(path: '/history', builder: (_, __) => const HistoryPage()),
         GoRoute(path: '/settings', builder: (_, __) => const SettingsPage()),
+        GoRoute(path: '/playlists', builder: (_, __) => const PlaylistsPage()),
+        GoRoute(path: '/playlists/:playlistId', builder: (_, state) => PlaylistDetailsPage(playlistId: state.pathParameters['playlistId']!)),
+        GoRoute(path: '/player', builder: (_, __) => const PlayerPage()),
       ]),
     ],
   );

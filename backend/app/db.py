@@ -110,6 +110,28 @@ class HistoryItemModel(TimestampMixin, Base):
     __table_args__ = (Index("uq_history_user_item", "user_id", "library_item_id", unique=True),)
 
 
+class PlaylistModel(TimestampMixin, Base):
+    __tablename__ = "playlists"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (Index("ix_playlists_user_name", "user_id", "name"),)
+
+
+class PlaylistItemModel(TimestampMixin, Base):
+    __tablename__ = "playlist_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    playlist_id: Mapped[str] = mapped_column(String(36), ForeignKey("playlists.id", ondelete="CASCADE"), nullable=False, index=True)
+    library_item_id: Mapped[str] = mapped_column(String(36), ForeignKey("library_items.id", ondelete="CASCADE"), nullable=False, index=True)
+    position: Mapped[int] = mapped_column(nullable=False, default=0)
+
+    __table_args__ = (Index("uq_playlist_library_item", "playlist_id", "library_item_id", unique=True), Index("ix_playlist_items_order", "playlist_id", "position"))
+
+
 class RefreshTokenModel(TimestampMixin, Base):
     __tablename__ = "refresh_tokens"
 

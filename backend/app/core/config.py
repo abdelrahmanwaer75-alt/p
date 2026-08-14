@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     jwt_audience: str = "vidora-client"
     access_token_ttl_seconds: int = Field(default=900, ge=60, le=3600)
     refresh_token_ttl_seconds: int = Field(default=60 * 60 * 24 * 30, ge=3600, le=60 * 60 * 24 * 365)
+    rate_limit_per_minute: int = Field(default=120, ge=10, le=10000)
+    auth_rate_limit_per_minute: int = Field(default=60, ge=3, le=1000)
+    cors_allow_credentials: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
@@ -33,6 +36,8 @@ class Settings(BaseSettings):
                 raise ValueError("JWT_SECRET must be a strong, non-default secret in production")
             if not self.jwt_issuer.strip() or not self.jwt_audience.strip():
                 raise ValueError("JWT issuer and audience must be configured in production")
+            if "*" in self.cors_origins or any(origin.startswith("http://") for origin in self.cors_origins):
+                raise ValueError("Production CORS origins must be explicit HTTPS origins")
         return self
 
     @property

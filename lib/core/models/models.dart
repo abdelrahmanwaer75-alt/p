@@ -185,3 +185,36 @@ class ManagedFile {
   final String title;
   Map<String, dynamic> toJson() => {'library_id': libraryId, 'path': path, 'media_path': mediaPath, 'filename': filename, 'size': size, 'mime_type': mimeType, 'extension': extension, 'media_type': mediaType, 'duration': duration, 'modified_at': modifiedAt?.toIso8601String(), 'is_favorite': isFavorite, 'title': title};
 }
+
+
+@Freezed()
+class PlaylistItem {
+  const PlaylistItem({required this.id, required this.playlistId, required this.libraryItemId, required this.position, required this.title, this.filename, this.mediaPath, this.mediaType = 'video', this.mimeType, this.duration, this.thumbnail});
+  final String id;
+  final String playlistId;
+  final String libraryItemId;
+  final int position;
+  final String title;
+  final String? filename;
+  final String? mediaPath;
+  final String mediaType;
+  final String? mimeType;
+  final int? duration;
+  final String? thumbnail;
+  factory PlaylistItem.fromJson(Map<String, dynamic> json) => PlaylistItem(id: json['id'] as String? ?? '', playlistId: json['playlist_id'] as String? ?? '', libraryItemId: json['library_item_id'] as String? ?? '', position: (json['position'] as num?)?.toInt() ?? 0, title: json['title'] as String? ?? 'Untitled', filename: json['filename'] as String?, mediaPath: json['media_path'] as String?, mediaType: json['media_type'] as String? ?? 'video', mimeType: json['mime_type'] as String?, duration: (json['duration'] as num?)?.toInt(), thumbnail: json['thumbnail'] as String?);
+  Map<String, dynamic> toJson() => {'id': id, 'playlist_id': playlistId, 'library_item_id': libraryItemId, 'position': position, 'title': title, 'filename': filename, 'media_path': mediaPath, 'media_type': mediaType, 'mime_type': mimeType, 'duration': duration, 'thumbnail': thumbnail};
+}
+
+@Freezed()
+class Playlist {
+  const Playlist({required this.id, required this.userId, required this.name, this.description, this.items = const [], this.createdAt, this.updatedAt});
+  final String id;
+  final String userId;
+  final String name;
+  final String? description;
+  final List<PlaylistItem> items;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  factory Playlist.fromJson(Map<String, dynamic> json) => Playlist(id: json['id'] as String? ?? '', userId: json['user_id'] as String? ?? '', name: json['name'] as String? ?? 'Untitled playlist', description: json['description'] as String?, items: _list(json['items']).map(PlaylistItem.fromJson).toList(), createdAt: _date(json['created_at']), updatedAt: _date(json['updated_at']));
+  Map<String, dynamic> toJson() => {'id': id, 'user_id': userId, 'name': name, 'description': description, 'items': items.map((e) => e.toJson()).toList(), 'created_at': createdAt?.toIso8601String(), 'updated_at': updatedAt?.toIso8601String()};
+}

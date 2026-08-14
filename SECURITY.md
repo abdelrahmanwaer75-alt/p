@@ -76,3 +76,7 @@ The current validation evidence supersedes the earlier point-in-time count: **95
 ## Final security validation status
 
 The backend security suite and dependency audit pass locally. GitHub security execution is not yet green because the previous workflow referenced an unresolved Trivy Action tag; the final workflow replaces it with a verified release and requires a new successful run. Production defaults remain guarded, and no passwords, tokens, or authorization headers are logged by application code.
+
+## Final CI completion
+
+GitHub Actions run `31829774202` passed Gitleaks and Trivy, as well as the backend security and dependency checks. Production remains subject to deployment-specific TLS, egress, secret-management, backup, monitoring, and penetration-testing controls; these are not inferred from a green repository scan.

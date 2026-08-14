@@ -20,6 +20,10 @@ class AppCopy {
   String get files => ar ? 'الملفات' : 'Files';
   String get favorites => ar ? 'المفضلة' : 'Favorites';
   String get settings => ar ? 'الإعدادات' : 'Settings';
+  String get account => ar ? 'الحساب' : 'Account';
+  String get signIn => ar ? 'تسجيل الدخول' : 'Sign in';
+  String get email => ar ? 'البريد الإلكتروني' : 'Email';
+  String get password => ar ? 'كلمة المرور' : 'Password';
   String get welcomeBody => ar
       ? 'مساحتك الآمنة لإدارة الوسائط المصرّح بتنزيلها والاستمتاع بها.'
       : 'Your trusted space for managing authorized media and enjoying it offline.';
@@ -239,6 +243,7 @@ class _ShellState extends State<Shell> {
       ),
       SettingsPage(
         copy: widget.copy,
+        api: widget.api,
         language: widget.language,
         theme: widget.theme,
         onLanguage: widget.onLanguage,
@@ -498,6 +503,7 @@ class EmptyCard extends StatelessWidget {
 
 class SettingsPage extends StatelessWidget {
   final AppCopy copy;
+  final VidoraApiClient api;
   final AppLanguage language;
   final ThemeChoice theme;
   final ValueChanged<AppLanguage> onLanguage;
@@ -505,17 +511,96 @@ class SettingsPage extends StatelessWidget {
   const SettingsPage({
     super.key,
     required this.copy,
+    required this.api,
     required this.language,
     required this.theme,
     required this.onLanguage,
     required this.onTheme,
   });
+  Future<void> _signIn(BuildContext context) async {
+    final email = TextEditingController();
+    final password = TextEditingController();
+    var loading = false;
+    String? error;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(copy.signIn),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: email,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(labelText: copy.email),
+              ),
+              TextField(
+                controller: password,
+                obscureText: true,
+                decoration: InputDecoration(labelText: copy.password),
+              ),
+              if (error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(error!),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(copy.skip),
+            ),
+            FilledButton(
+              onPressed: loading
+                  ? null
+                  : () async {
+                      setDialogState(() {
+                        loading = true;
+                        error = null;
+                      });
+                      try {
+                        await api.login(email.text.trim(), password.text);
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      } catch (_) {
+                        setDialogState(() {
+                          loading = false;
+                          error = copy.authorizedOnly;
+                        });
+                      }
+                    },
+              child: loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(copy.signIn),
+            ),
+          ],
+        ),
+      ),
+    );
+    email.dispose();
+    password.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(copy.settings)),
     body: ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.person_rounded),
+            title: Text(copy.account),
+            subtitle: Text(copy.signIn),
+            onTap: () => _signIn(context),
+          ),
+        ),
+        const SizedBox(height: 20),
         Text(
           copy.appearance,
           style: Theme.of(context).textTheme.titleMedium

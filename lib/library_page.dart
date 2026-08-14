@@ -33,6 +33,7 @@ class _LibraryPageState extends State<LibraryPage> {
   Future<List<LibraryItem>> _load() {
     if (widget.mode == 'favorites') return widget.api.favorites();
     if (widget.mode == 'history') return widget.api.history();
+    if (widget.mode == 'files') return widget.api.files();
     return widget.api.library();
   }
 

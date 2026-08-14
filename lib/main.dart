@@ -241,7 +241,7 @@ class _ShellState extends State<Shell> {
       ),
       LibraryPage(
         api: widget.api,
-        mode: 'library',
+        mode: 'files',
         icon: Icons.folder_rounded,
         title: widget.copy.files,
         emptyBody: widget.copy.emptyFilesBody,

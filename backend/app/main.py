@@ -88,10 +88,14 @@ async def create_library_item(payload: LibraryItemCreate, user: UserResponse = D
     return library_repository.create(user.id, payload)
 
 
-@api.get("/files", response_model=list[LibraryItem], tags=["library"])
 @api.get("/library", response_model=list[LibraryItem], tags=["library"])
 async def list_library(user: UserResponse = Depends(get_current_user)) -> list[LibraryItem]:
     return library_repository.list(user.id)
+
+
+@api.get("/files", response_model=list[LibraryItem], tags=["library"])
+async def list_files(user: UserResponse = Depends(get_current_user)) -> list[LibraryItem]:
+    return library_repository.list(user.id, files_only=True)
 
 
 @api.get("/favorites", response_model=list[LibraryItem], tags=["library"])

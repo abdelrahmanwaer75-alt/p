@@ -54,3 +54,7 @@ Download tasks are now stored in SQLite through `backend/app/repositories/downlo
 Download creation now persists the task and publishes its identifier to the Redis list `vidora:downloads`. The worker entrypoint is `backend/worker.py`; in the Compose stack it runs as a separate `worker` service. The worker consumes task IDs and records a measured terminal failure when no authorized platform adapter is configured. It never fabricates progress and never executes raw shell commands.
 
 For local Compose development, start the stack with `docker compose -f infrastructure/docker-compose.yml up --build`. The API is available on port 8000. Production deployments must replace the development JWT secret and configure an authorized extractor adapter before enabling real media execution.
+
+## Durable files API
+
+The authenticated `GET /api/v1/files` endpoint now returns only library records with a durable `media_path`. The Flutter Files tab uses this endpoint, while the general library, favorites, history, and downloads views remain separate. A record is not presented as an offline file until a real worker has produced and persisted its media path.

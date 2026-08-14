@@ -210,6 +210,7 @@ class VidoraApiClient {
   }
 
   Future<List<LibraryItem>> library() => _getLibrary('/api/v1/library');
+  Future<List<LibraryItem>> files() => _getLibrary('/api/v1/files');
   Future<List<LibraryItem>> favorites() => _getLibrary('/api/v1/favorites');
   Future<List<LibraryItem>> history() => _getLibrary('/api/v1/history');
 

@@ -47,13 +47,15 @@ class LibraryRepository:
             )
         return item
 
-    def list(self, owner_id: UUID, *, favorites_only: bool = False, history_only: bool = False) -> list[LibraryItem]:
+    def list(self, owner_id: UUID, *, favorites_only: bool = False, history_only: bool = False, files_only: bool = False) -> list[LibraryItem]:
         query = "SELECT * FROM library_items WHERE owner_id = ?"
         params: list[object] = [str(owner_id)]
         if favorites_only:
             query += " AND is_favorite = 1"
         if history_only:
             query += " AND viewed_at IS NOT NULL"
+        if files_only:
+            query += " AND media_path IS NOT NULL"
         query += " ORDER BY COALESCE(viewed_at, created_at) DESC"
         with self._connect() as connection:
             rows = connection.execute(query, params).fetchall()

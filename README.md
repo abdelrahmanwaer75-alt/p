@@ -174,3 +174,5 @@ The repository's `main` branch currently does not have GitHub branch protection 
 The CI pipeline was validated against the current source rather than previous reports. Freezed model declarations now use the required generated mixins, the stale unused `models.g.dart` part was removed, and `dart run build_runner build` succeeds before Flutter analysis and tests. The generated `models.freezed.dart` output is committed and refreshed by CI.
 
 The backend test dependency now requires a non-vulnerable pytest release range. Ruff runs an explicit E4/E7/E9/F baseline with documented compatibility-export exceptions, mypy runs against the typed core/database/storage layers, and pip-audit checks only the declared backend requirements manifest. The PostgreSQL/Redis integration job uses real service containers and the dedicated integration test is skipped only in ordinary local runs where those service URLs are not provided.
+
+For the exact per-platform authorized download status and the conditions required before enabling an adapter, see [`AUTHORIZED_DOWNLOAD_REPORT.md`](AUTHORIZED_DOWNLOAD_REPORT.md).

@@ -58,13 +58,19 @@ class PlatformExtractor(ABC):
     async def analyze(self, url: str, authorized: bool = False) -> AnalyzerResult:
         if not self.available:
             return self.unavailable_result(url)
-        self.validate_authorization(authorized)
+        self.validate(url, authorized=authorized)
         try:
             metadata = await self.get_metadata(url)
             formats = await self.get_formats(url)
         except ExtractorUnavailable:
             return self.unavailable_result(url)
         return self.build_result(url, metadata, formats)
+
+    def validate(self, url: str, *, authorized: bool) -> None:
+        """Validate source authorization before any platform operation."""
+        if not url.startswith(("http://", "https://")):
+            raise ValueError("Only HTTP(S) source URLs are supported")
+        self.validate_authorization(authorized)
 
     def validate_authorization(self, authorized: bool) -> None:
         if not authorized:

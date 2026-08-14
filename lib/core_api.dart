@@ -60,6 +60,36 @@ class SessionStore {
   }
 }
 
+class DownloadTask {
+  final String id;
+  final String sourceUrl;
+  final String formatId;
+  final String status;
+  final double? progressPercent;
+  final bool progressKnown;
+  final String? errorMessage;
+
+  const DownloadTask({
+    required this.id,
+    required this.sourceUrl,
+    required this.formatId,
+    required this.status,
+    required this.progressPercent,
+    required this.progressKnown,
+    required this.errorMessage,
+  });
+
+  factory DownloadTask.fromJson(Map<String, dynamic> json) => DownloadTask(
+    id: json['id'] as String? ?? '',
+    sourceUrl: json['source_url'] as String? ?? '',
+    formatId: json['format_id'] as String? ?? '',
+    status: json['status'] as String? ?? 'queued',
+    progressPercent: (json['progress_percent'] as num?)?.toDouble(),
+    progressKnown: json['progress_known'] as bool? ?? false,
+    errorMessage: json['error_message'] as String?,
+  );
+}
+
 class LibraryItem {
   final String id;
   final String title;
@@ -140,6 +170,25 @@ class VidoraApiClient {
         .whereType<Map<String, dynamic>>()
         .map(LibraryItem.fromJson)
         .toList();
+  }
+
+  Future<List<DownloadTask>> downloads() async {
+    final response = await _dio.get<List<dynamic>>(
+      '/api/v1/downloads',
+      options: Options(headers: _authHeaders),
+    );
+    return (response.data ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(DownloadTask.fromJson)
+        .toList();
+  }
+
+  Future<DownloadTask> downloadStatus(String id) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/downloads/$id',
+      options: Options(headers: _authHeaders),
+    );
+    return DownloadTask.fromJson(response.data ?? const {});
   }
 
   Future<List<LibraryItem>> library() => _getLibrary('/api/v1/library');

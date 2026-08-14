@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core_api.dart';
 import 'library_page.dart';
+import 'downloads_page.dart';
 
 void main() => runApp(const VidoraApp());
 
@@ -227,10 +228,11 @@ class _ShellState extends State<Shell> {
   Widget build(BuildContext context) {
     final pages = [
       HomePage(copy: widget.copy, api: widget.api),
-      EmptyPage(
-        icon: Icons.download_rounded,
-        title: widget.copy.emptyDownloads,
-        body: widget.copy.emptyDownloadsBody,
+      DownloadsPage(
+        api: widget.api,
+        title: widget.copy.downloads,
+        emptyTitle: widget.copy.emptyDownloads,
+        emptyBody: widget.copy.emptyDownloadsBody,
       ),
       LibraryPage(
         api: widget.api,

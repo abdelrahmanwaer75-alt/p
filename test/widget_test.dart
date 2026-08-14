@@ -3,18 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vidora/main.dart';
 
 void main() {
-  testWidgets('Vidora onboarding starts correctly', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('Vidora starts at onboarding and routes to sign in', (WidgetTester tester) async {
     await tester.pumpWidget(const VidoraApp());
+    await tester.pumpAndSettle();
     expect(find.text('Vidora'), findsOneWidget);
-    expect(find.text('Download. Organize. Enjoy.'), findsOneWidget);
+    expect(find.text('Download and organize authorized media.'), findsOneWidget);
     expect(find.text('Get started'), findsOneWidget);
 
     await tester.tap(find.text('Get started'));
     await tester.pumpAndSettle();
-    expect(find.text('Good evening'), findsOneWidget);
-    expect(find.text('Downloads'), findsOneWidget);
-    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Sign in'), findsOneWidget);
   });
 }

@@ -15,8 +15,8 @@ class FakeQueue:
         return task_id
 
 
-def test_worker_marks_task_failed_without_authorized_adapter(tmp_path) -> None:
-    repository = DownloadRepository(str(tmp_path / "worker.db"))
+def test_worker_marks_task_failed_without_authorized_adapter() -> None:
+    repository = DownloadRepository()
     owner_id = UUID("11111111-1111-1111-1111-111111111111")
     task = repository.create(
         DownloadTaskCreate(source_url="https://example.com/a.mp4", format_id="mp4", authorized=True),

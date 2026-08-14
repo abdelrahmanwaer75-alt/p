@@ -71,20 +71,12 @@ def test_download_requires_source_authorization() -> None:
     assert response.status_code == 403
 
 
-def test_download_is_queued_without_fake_progress() -> None:
+def test_download_rejects_unavailable_extractor_without_fake_queueing() -> None:
     headers = auth_headers('owner@example.com')
     response = client.post(
         "/api/v1/downloads",
         headers=headers,
         json={"source_url": "https://example.com/video.mp4", "format_id": "mp4", "authorized": True},
     )
-    assert response.status_code == 202
-    task = response.json()["task"]
-    assert task["status"] == "queued"
-    assert task["progress_percent"] is None
-    assert task["progress_known"] is False
-
-    run_response = client.post(f"/api/v1/downloads/{task['id']}/run", headers=headers)
-    assert run_response.status_code == 200
-    assert run_response.json()["status"] == "queued"
-    assert run_response.json()["progress_percent"] is None
+    assert response.status_code == 501
+    assert response.json()["detail"] == "FEATURE_NOT_AVAILABLE"

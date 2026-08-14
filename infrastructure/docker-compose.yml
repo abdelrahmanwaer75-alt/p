@@ -1,13 +1,21 @@
 services:
   api:
+    restart: unless-stopped
     build:
       context: ../backend
     environment:
-      ENVIRONMENT: development
+      ENVIRONMENT: ${ENVIRONMENT:-production}
       LOG_LEVEL: INFO
-      DATABASE_URL: postgresql+asyncpg://vidora:vidora@postgres:5432/vidora
+      DATABASE_URL: postgresql+psycopg://vidora:vidora@postgres:5432/vidora
+      DOWNLOAD_DIRECTORY: /app/data/media
+      AUTO_CREATE_DB: "false"
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the environment}
+      JWT_ISSUER: ${JWT_ISSUER:-vidora-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-vidora-client}
+      ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+      REFRESH_TOKEN_TTL_SECONDS: ${REFRESH_TOKEN_TTL_SECONDS:-2592000}
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
     depends_on:
@@ -22,16 +30,25 @@ services:
       retries: 5
 
   worker:
+    restart: unless-stopped
     build:
       context: ../backend
     command: python worker.py
     environment:
-      ENVIRONMENT: development
+      ENVIRONMENT: ${ENVIRONMENT:-production}
       LOG_LEVEL: INFO
-      DOWNLOAD_DB_PATH: /app/data/vidora_downloads.db
+      DATABASE_URL: postgresql+psycopg://vidora:vidora@postgres:5432/vidora
+      DOWNLOAD_DIRECTORY: /app/data/media
+      AUTO_CREATE_DB: "false"
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the environment}
+      JWT_ISSUER: ${JWT_ISSUER:-vidora-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-vidora-client}
+      ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+      REFRESH_TOKEN_TTL_SECONDS: ${REFRESH_TOKEN_TTL_SECONDS:-2592000}
     depends_on:
+      api:
+        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -41,6 +58,7 @@ services:
       retries: 5
 
   postgres:
+    restart: unless-stopped
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: vidora
@@ -55,6 +73,7 @@ services:
       retries: 5
 
   redis:
+    restart: unless-stopped
     image: redis:7-alpine
     command: redis-server --appendonly yes
     volumes:

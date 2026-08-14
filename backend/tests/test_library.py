@@ -37,7 +37,11 @@ def test_files_endpoint_returns_only_durable_media_records() -> None:
     token = client.post("/api/v1/auth/login", json={"email": email, "password": password}).json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     client.post("/api/v1/library", headers=headers, json={"title": "Pending", "source_url": "https://example.com/pending"})
-    client.post("/api/v1/library", headers=headers, json={"title": "Stored", "source_url": "https://example.com/stored", "media_path": "outputs/stored.mp4"})
+    from pathlib import Path
+    managed_file = Path("backend/data/media/outputs/stored.mp4")
+    managed_file.parent.mkdir(parents=True, exist_ok=True)
+    managed_file.write_bytes(b"real media bytes")
+    client.post("/api/v1/library", headers=headers, json={"title": "Stored", "source_url": "https://example.com/stored", "media_path": str(managed_file.resolve())})
     response = client.get("/api/v1/files", headers=headers)
     assert response.status_code == 200
     assert [item["title"] for item in response.json()] == ["Stored"]

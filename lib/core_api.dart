@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'core/config/app_config.dart';
 
 class AnalyzerPreview {
   final String platform;
@@ -129,10 +130,7 @@ class VidoraApiClient {
         BaseOptions(
           baseUrl:
               baseUrl ??
-              const String.fromEnvironment(
-                'VIDORA_API_URL',
-                defaultValue: 'http://127.0.0.1:8000',
-              ),
+              AppConfig.apiBaseUrl,
           connectTimeout: const Duration(seconds: 5),
           receiveTimeout: const Duration(seconds: 10),
           headers: {'Content-Type': 'application/json'},

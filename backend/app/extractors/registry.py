@@ -1,13 +1,23 @@
 from dataclasses import dataclass
-from typing import Protocol
 
-from app.schemas.analyzer import AnalyzerResult, Platform
+from app.extractors.base import PlatformExtractor
+from app.extractors.dailymotion import DailymotionExtractor
+from app.extractors.reddit import RedditExtractor
+from app.extractors.soundcloud import SoundCloudExtractor
+from app.extractors.twitch import TwitchExtractor
+from app.extractors.vimeo import VimeoExtractor
+from app.schemas.analyzer import Platform
 
 
-class PlatformExtractor(Protocol):
-    platform: Platform
-
-    async def analyze(self, url: str, authorized: bool) -> AnalyzerResult: ...
+ALLOWED_PLATFORMS = frozenset(
+    {
+        Platform.REDDIT,
+        Platform.VIMEO,
+        Platform.DAILYMOTION,
+        Platform.SOUNDCLOUD,
+        Platform.TWITCH,
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -22,26 +32,27 @@ def authorize_analysis(*, authorized: bool) -> PolicyDecision:
     return PolicyDecision(True, "Authorized analysis may proceed through a platform-approved adapter")
 
 
-class UnconfiguredExtractor:
-    def __init__(self, platform: Platform) -> None:
-        self.platform = platform
-
-    async def analyze(self, url: str, authorized: bool) -> AnalyzerResult:
-        decision = authorize_analysis(authorized=authorized)
-        if not decision.allowed:
-            raise PermissionError(decision.reason)
-        raise NotImplementedError(f"No platform-approved extractor configured for {self.platform.value}")
-
-
 class ExtractorRegistry:
     def __init__(self) -> None:
-        self._extractors = {platform: UnconfiguredExtractor(platform) for platform in Platform}
+        self._extractors: dict[Platform, PlatformExtractor] = {
+            Platform.REDDIT: RedditExtractor(),
+            Platform.VIMEO: VimeoExtractor(),
+            Platform.DAILYMOTION: DailymotionExtractor(),
+            Platform.SOUNDCLOUD: SoundCloudExtractor(),
+            Platform.TWITCH: TwitchExtractor(),
+        }
 
-    def get(self, platform: Platform) -> PlatformExtractor:
-        return self._extractors[platform]
+    def get(self, platform: Platform) -> PlatformExtractor | None:
+        return self._extractors.get(platform)
+
+    def is_allowed(self, platform: Platform) -> bool:
+        return platform in ALLOWED_PLATFORMS
 
     def supported_platforms(self) -> list[Platform]:
-        return [platform for platform, extractor in self._extractors.items() if not isinstance(extractor, UnconfiguredExtractor)]
+        return [platform for platform in ALLOWED_PLATFORMS if self._extractors[platform].available]
+
+    def allowed_platforms(self) -> frozenset[Platform]:
+        return ALLOWED_PLATFORMS
 
 
 registry = ExtractorRegistry()

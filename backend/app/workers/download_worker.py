@@ -186,6 +186,12 @@ async def process_once(
         _publish(queue, task.id, "failed", error_code="FEATURE_NOT_AVAILABLE")
         return True
     except TransientDownloadError as exc:
+        current = repository.get_any(task.id)
+        if current is not None and current.status in {DownloadStatus.CANCELLING, DownloadStatus.CANCELLED}:
+            repository.update(task.id, status=DownloadStatus.CANCELLED.value, cancelled_at=now(), error_code=None, error_message=None)
+            _ack(queue, message.message_id)
+            _publish(queue, task.id, "cancelled")
+            return True
         next_retry = RETRY_POLICY.next_attempt(task.retry_count)
         if RETRY_POLICY.should_retry(task.retry_count):
             repository.update(task.id, status=DownloadStatus.QUEUED.value, retry_count=next_retry, error_code="TRANSIENT_RETRY", error_message=str(exc))
@@ -206,6 +212,12 @@ async def process_once(
         _publish(queue, task.id, "failed", error_code="RETRY_EXHAUSTED")
         return True
     except Exception as exc:
+        current = repository.get_any(task.id)
+        if current is not None and current.status in {DownloadStatus.CANCELLING, DownloadStatus.CANCELLED}:
+            repository.update(task.id, status=DownloadStatus.CANCELLED.value, cancelled_at=now(), error_code=None, error_message=None)
+            _ack(queue, message.message_id)
+            _publish(queue, task.id, "cancelled")
+            return True
         logger.exception("Permanent download failure for task %s", task.id)
         _error_task(repository, task.id, "DOWNLOAD_FAILED", str(exc))
         _ack(queue, message.message_id)

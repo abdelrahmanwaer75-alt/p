@@ -89,3 +89,11 @@ The Compose stack mounts the same named `media_data` volume into API and worker.
 ## Verification boundary
 
 Automated backend and Flutter tests validate application behavior. CI additionally runs Python compilation, Ruff, mypy, Alembic migration checks against PostgreSQL, Flutter formatting/analyze/test, and Docker Compose/image checks. Android and iOS device builds, signing, notification rendering, background scheduling under real OS policy, and production network controls require platform and deployment environments; they must not be represented as verified by sandbox-only tests.
+
+## Current infrastructure verification
+
+The current Compose definition contains API, worker, PostgreSQL, and Redis services. API and worker use the same PostgreSQL database URL pattern and the same Redis service endpoint. Both API and worker mount the named writable `media_data` volume at `/app/data/media`, so production downloads are not stored only in a container layer.
+
+The API is gated on healthy PostgreSQL and Redis services. Its liveness check uses `/health`, while `/ready` performs dependency checks and returns HTTP 503 when PostgreSQL or Redis is unavailable. The worker writes `/tmp/vidora-worker.ready` only after successful dependency checks; its healthcheck validates marker freshness rather than printing a constant success value.
+
+The Compose services use non-root execution, read-only roots for API and worker, tmpfs for temporary writes, dropped capabilities, `no-new-privileges`, persistent PostgreSQL/Redis/media volumes, restart policies, and dependency health conditions. A live Docker Compose build/up/ps verification was not possible in the sandbox because Docker was unavailable. The repository's CI workflow contains Compose configuration and backend image-build checks for a Docker-capable runner.

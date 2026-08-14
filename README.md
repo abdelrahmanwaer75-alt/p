@@ -150,3 +150,11 @@ The Android release configuration no longer signs release artifacts with debug k
 ## Final QA reporting rule
 
 A green sandbox test run does not by itself establish production readiness. Production deployment remains blocked until the release keystore, protected PostgreSQL and Redis deployment, TLS/reverse-proxy policy, external egress controls, encrypted backups and restore tests, dependency/image scans, observability, and platform-specific Android/iOS validation are completed and accepted by the operator.
+
+## Production infrastructure verification
+
+A current repository inspection confirms that the Compose stack defines four services: API, worker, PostgreSQL, and Redis. API and worker use the same PostgreSQL connection pattern and Redis service address, while both mount the same persistent writable `media_data` volume at `/app/data/media`. Production schema creation is disabled and the API starts through `alembic upgrade head` before Uvicorn.
+
+The API healthcheck calls `GET /health`, which is liveness-only. `GET /ready` checks both PostgreSQL and Redis and returns an unavailable response when either dependency fails. The worker does not use a fake print-based healthcheck: it writes `/tmp/vidora-worker.ready` only after database and Redis checks succeed, and the Compose healthcheck verifies the marker freshness.
+
+The containers use non-root UID/GID `10001:10001`, read-only roots, `/tmp` tmpfs, dropped capabilities, `no-new-privileges`, persistent service volumes, dependency health conditions, and restart policies. Docker runtime communication, image build, and live service health could not be executed in the sandbox because Docker was unavailable; these checks are configured in CI and remain deployment verification items.

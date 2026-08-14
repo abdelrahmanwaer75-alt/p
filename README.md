@@ -178,3 +178,8 @@ The backend test dependency now requires a non-vulnerable pytest release range. 
 For the exact per-platform authorized download status and the conditions required before enabling an adapter, see [`AUTHORIZED_DOWNLOAD_REPORT.md`](AUTHORIZED_DOWNLOAD_REPORT.md).
 
 For the complete authentication, JWT, authorization, rate-limit, WebSocket isolation, and sensitive-logging audit, see [`AUTH_SECURITY_AUDIT.md`](AUTH_SECURITY_AUDIT.md).
+
+
+## Final production-readiness audit
+
+The latest component-by-component audit is available in [`FINAL_PRODUCTION_READINESS_AUDIT.md`](FINAL_PRODUCTION_READINESS_AUDIT.md). It records the exact evidence, environment-dependent checks, disabled downloader status, and remaining blockers. Vidora must not be labeled fully production-ready until the documented Docker, PostgreSQL/Redis, mobile-device, approved-extractor, reconciliation, and deployment-security checks are completed.

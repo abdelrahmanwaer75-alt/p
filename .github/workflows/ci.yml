@@ -70,7 +70,7 @@ jobs:
       - name: Apply Alembic migrations against PostgreSQL
         env:
           DATABASE_URL: postgresql+psycopg://vidora:vidora-ci-password@127.0.0.1:5432/vidora
-          ENVIRONMENT: production
+          ENVIRONMENT: ci
           AUTO_CREATE_DB: 'false'
           JWT_SECRET: ci-only-secret-that-is-longer-than-32-characters
           ALLOWED_ORIGINS: https://ci.example.test
@@ -81,7 +81,7 @@ jobs:
           VIDORA_CI_REDIS_URL: redis://127.0.0.1:6379/0
           DATABASE_URL: postgresql+psycopg://vidora:vidora-ci-password@127.0.0.1:5432/vidora
           REDIS_URL: redis://127.0.0.1:6379/0
-          ENVIRONMENT: production
+          ENVIRONMENT: ci
           AUTO_CREATE_DB: 'false'
           JWT_SECRET: ci-only-secret-that-is-longer-than-32-characters
           ALLOWED_ORIGINS: https://ci.example.test

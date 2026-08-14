@@ -137,3 +137,8 @@ Unavailable adapters return `supported=false`, `FEATURE_NOT_AVAILABLE`, empty fo
 | Full backend suite | **75 passed** |
 | `python3 -m compileall -q backend` | Passed |
 | `git diff --check` | Passed |
+
+
+## Final production-readiness audit correction
+
+Historical phase entries above are retained for traceability. The current final evidence is summarized in [`FINAL_PRODUCTION_READINESS_AUDIT.md`](FINAL_PRODUCTION_READINESS_AUDIT.md): 95 backend tests pass with 2 external-service skips, 15 Flutter tests pass, Ruff passes after the Alembic cleanup, and full mypy remains an unresolved typing debt rather than a passing check. Docker, live PostgreSQL/Redis, Android/iOS device behavior, approved real download adapters, and trusted mobile-to-backend reconciliation remain blockers. Vidora must not be labeled fully production-ready until those critical items are verified or implemented.

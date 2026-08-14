@@ -263,3 +263,8 @@ Vidora has a strong modular foundation and has undergone substantial security, r
 - [`MEDIA_PLAYER_PLAYLIST_REPORT.md`](MEDIA_PLAYER_PLAYLIST_REPORT.md)
 - [`BACKGROUND_DOWNLOAD_REPORT.md`](BACKGROUND_DOWNLOAD_REPORT.md)
 - [`FLUTTER_INTEGRATION_REPORT.md`](FLUTTER_INTEGRATION_REPORT.md)
+
+
+## Final audit addendum
+
+The current component-by-component status is maintained in [`FINAL_PRODUCTION_READINESS_AUDIT.md`](FINAL_PRODUCTION_READINESS_AUDIT.md). Historical commit details above describe earlier milestones; the final audit commit must be taken from the repository HEAD after this audit is pushed. Current evidence is 95 backend tests passed with 2 external-service skips, 15 Flutter tests passed, Ruff passed, and full mypy/Docker/live service/mobile-device/approved-downloader verification remains incomplete. Vidora is not fully production-ready until the blockers in the final audit are closed.

@@ -97,3 +97,8 @@ The current Compose definition contains API, worker, PostgreSQL, and Redis servi
 The API is gated on healthy PostgreSQL and Redis services. Its liveness check uses `/health`, while `/ready` performs dependency checks and returns HTTP 503 when PostgreSQL or Redis is unavailable. The worker writes `/tmp/vidora-worker.ready` only after successful dependency checks; its healthcheck validates marker freshness rather than printing a constant success value.
 
 The Compose services use non-root execution, read-only roots for API and worker, tmpfs for temporary writes, dropped capabilities, `no-new-privileges`, persistent PostgreSQL/Redis/media volumes, restart policies, and dependency health conditions. A live Docker Compose build/up/ps verification was not possible in the sandbox because Docker was unavailable. The repository's CI workflow contains Compose configuration and backend image-build checks for a Docker-capable runner.
+
+
+## Final audit addendum
+
+The final component audit is recorded in [`FINAL_PRODUCTION_READINESS_AUDIT.md`](FINAL_PRODUCTION_READINESS_AUDIT.md). The architecture is modular and substantially hardened, but full production readiness remains blocked by unavailable Docker/runtime validation, unverified Android/iOS device behavior, intentionally disabled approved media download integrations, and the missing trusted mobile-to-backend file reconciliation contract.

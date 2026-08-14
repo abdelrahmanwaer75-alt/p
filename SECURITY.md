@@ -67,3 +67,8 @@ Last reviewed: 2026-08-14
 
 This file should be updated whenever authentication, extractors, storage, queue, deployment, or dependency controls change.
 
+
+
+## Final audit correction
+
+The current validation evidence supersedes the earlier point-in-time count: **95 backend tests pass with 2 external-service skips**, and **15 Flutter tests pass**. Endpoint-specific authentication, analyzer, download-creation, and general API rate-limit buckets are implemented; production rejects local Redis and fails closed when the shared Redis rate-limit backend is unavailable. See [`FINAL_PRODUCTION_READINESS_AUDIT.md`](FINAL_PRODUCTION_READINESS_AUDIT.md) for the complete status table and remaining deployment blockers.
